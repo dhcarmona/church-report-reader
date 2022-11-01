@@ -5,6 +5,7 @@ from constants import *
 import google.auth
 import click
 import json
+import csv
 from apiclient import discovery
 from httplib2 import Http
 from oauth2client import client, file, tools
@@ -152,7 +153,7 @@ def getQuestionIds(form):
         elif ("Muertes") in questionTitle:
             questionIds[DEATHS] = item.get("questionItem").get("question").get("questionId")
         elif ("Traslados") in questionTitle:
-            questionIds[TRANSFERS] = item.get("questionItem").get("question").get("questionId")
+            questionIds[MOVES] = item.get("questionItem").get("question").get("questionId")
         elif ("Otras causas") in questionTitle:
             questionIds[OTHER_LOSSES] = item.get("questionItem").get("question").get("questionId")
     # print(json.dumps(questionIds, indent=4))
@@ -182,7 +183,7 @@ for form in forms:
     print("Encontradas "+ str(len(responseList)) +" respuestas para este formulario.")
     churchesWhoAnsweredThisForm = []
     for response in responseList:
-        churchResponse = ChurchResponse(response, questionIds)
+        churchResponse = ChurchResponse(response, questionIds, formName)
         #print(json.dumps(response, indent=4))
         try:
             responseAnswers = response.get("answers")
@@ -263,3 +264,16 @@ if click.confirm("Imprimir acumulados por iglesia?", default=True):
 
         print(" -------- ")
 
+if click.confirm("Escribir reporte por formulario, por iglesia?", default=False):
+    print("")
+    print(" -- REPORTE INDIVIDUAL POR IGLESIA")
+    print("------")
+    for church in responsesPerChurch.keys():
+        fileName = 'reporte_'+church+'.csv'
+        print(" - Escribiendo a archivo: " + fileName)
+        with open(fileName, 'w', encoding='UTF8', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(responsesPerChurch[church][0].individualDataRow.getHeaderList())
+            for response in responsesPerChurch[church]:
+                # write the data
+                writer.writerow(response.individualDataRow.getDataList())
