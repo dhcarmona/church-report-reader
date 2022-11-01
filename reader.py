@@ -62,13 +62,10 @@ try:
             for file in filesResponse.get('files', []):
                 print(F'Encontrado archivo: {file.get("name")}, {file.get("id")}')
                 files.extend(filesResponse.get('files', []))
-                try: 
-                    if processAllFiles:
-                        formIds.append(file.get("id"))
-                    elif click.confirm("Procesar este archivo?", default=True, abort=True):
-                        formIds.append(file.get("id"))
-                except:
-                    break
+                if processAllFiles:
+                    formIds.append(file.get("id"))
+                elif click.confirm("Procesar este archivo?", default=True):
+                    formIds.append(file.get("id"))
             page_token = filesResponse.get('nextPageToken', None)
             if page_token is None:
                 break
@@ -192,7 +189,11 @@ for form in forms:
             churchQuestionAnswer = responseAnswers.get(churchQuestionId)
             churchQuestionTextAnswers = churchQuestionAnswer.get("textAnswers")
             churchAnswer = churchQuestionTextAnswers.get("answers")[0].get("value")
-            # print("Encontrada iglesia para esta respuesta: " + churchAnswer)
+            print("Encontrada respuesta para esta iglesia: " + churchAnswer)
+            if churchAnswer in churchesWhoAnsweredThisForm:
+                print("Ya existe una respuesta de esta iglesia para este formulario.")
+                print("Ignorando esta respuesta.")
+                continue
             churchesWhoAnsweredThisForm.append(churchAnswer)
             if not churchAnswer in responsesPerChurch:
                 responsesPerChurch[churchAnswer] = []

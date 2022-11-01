@@ -43,7 +43,7 @@ class ChurchResponse:
         self.promiseDollars = 0
 
         # Get financial form data
-        print(json.dumps(questionIds, indent = 4))
+        #print(json.dumps(questionIds, indent = 4))
         if questionIds[SIMPLE_COLONES] in answers:
             self.simpleColones = self.sanitizeMonetaryInput(self.getAnswerValue(answers[questionIds[SIMPLE_COLONES]]))
         if questionIds[SIMPLE_DOLLARS] in answers:
