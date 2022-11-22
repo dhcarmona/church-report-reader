@@ -13,6 +13,7 @@ class WeekData:
         self.comulgants = commulgants
 
 class ChurchResponse: 
+
     weekDatum = []
 
     def getAnswerValue(self, responseAnswer):
@@ -50,6 +51,8 @@ class ChurchResponse:
         self.deaths = 0
         self.moves = 0
         self.otherLosses = 0
+
+        self.amountOfServices = 0
 
         # Get financial form data
         #print(json.dumps(questionIds, indent = 4))
@@ -112,9 +115,13 @@ class ChurchResponse:
 
                 commulgantsAnswer = answers[questionIds[COMMULGANTS_PREFIX+str(index)]]
                 commulgantsAnswerValue = self.getAnswerValue(commulgantsAnswer)
-                print("-- Comulgantes para la semana: " + assistantsAnswerValue)
+                print("-- Comulgantes para la semana: " + commulgantsAnswerValue)
                 try:
-                    self.totalCommulgants = self.totalCommulgants + int(assistantsAnswerValue)
+                    self.totalCommulgants = self.totalCommulgants + int(commulgantsAnswerValue)
+                    if int(assistantsAnswerValue) > 0:
+                        self.amountOfServices = self.amountOfServices + 1
+                    else:
+                        print("-- REPORTE FALTAS Iglesia "+ self.churchName + " reporto " +assistantsAnswerValue)
                 except ValueError:
                     print("Error converting value to int.")
 
@@ -122,21 +129,63 @@ class ChurchResponse:
             else:
                 break
                 
-        #print(json.dumps(self.__dict__, indent = 4))
+        print(json.dumps(self.__dict__, indent = 4))
         self.individualDataRow = IndividualDataRow(self.formName, self.totalAssistants, self.totalCommulgants, self.simpleColones,
                                 self.simpleDollars, self.designatedColones, self.designatedDollars, self.promiseColones,
                                 self.promiseDollars, self.baptisms, self.confirmations, self.receptions, self.transfers,
-                                self.restores, self.deaths, self.moves, self.otherLosses)
+                                self.restores, self.deaths, self.moves, self.otherLosses, self.amountOfServices)
+        
+        self.individualFormRow = IndividualFormRow(self.churchName, self.reportFiller, self.totalAssistants, self.totalCommulgants,
+                                                    self.simpleColones, self.simpleDollars, self.designatedColones, self.designatedDollars,
+                                                    self.promiseColones, self.promiseDollars, self.baptisms, self.confirmations, self.receptions,
+                                                    self.transfers, self.restores, self.deaths, self.moves, self.otherLosses)
 
 
     def addWeekData(self, weekData):
         self.weekDatum.append(weekData)
 
+class CummulativeDataRow:
+    def __init__(self, churchName, totalReports, totalAssistants, totalCommulgants, totalSimpleColones, totalSimpleDollars, totalDesignatedColones,
+                totalDesignatedDollars, totalPromiseColones, totalPromiseDollars, totalBaptisms, totalConfirmations, totalReceptions, totalTransfers,
+                totalRestores, totalDeaths, totalMoves, totalOtherLosses, totalServices):
+        self.totalReports = totalReports
+        self.churchName = churchName
+        self.totalAssistants = totalAssistants
+        self.totalCommulgants = totalCommulgants
+        self.totalSimpleColones = totalSimpleColones
+        self.totalSimpleDollars = totalSimpleDollars
+        self.totalDesignatedColones = totalDesignatedColones
+        self.totalDesignatedDollars = totalDesignatedDollars
+        self.totalPromiseColones = totalPromiseColones
+        self.totalPromiseDollars = totalPromiseDollars
+        self.totalBaptisms = totalBaptisms
+        self.totalConfirmations = totalConfirmations
+        self.totalReceptions = totalReceptions
+        self.totalTransfers = totalTransfers
+        self.totalRestores = totalRestores
+        self.totalDeaths = totalDeaths
+        self.totalMoves = totalMoves
+        self.totalOtherLosses = totalOtherLosses
+        self.totalServices = totalServices
+
+    @staticmethod
+    def getHeaderList():
+        return ["Nombre Iglesia", "Formularios Llenos", "Asistentes en el Periodo", "Comulgantes en el Periodo", "Total Ofrenda Simple Colones",
+                "Total Ofrenda Simple Dolares", "Total Ofrenda Designada Colones", "Total Ofrenda Designada Dolares", "Total Promesas Colones",
+                "Total Promesas Dolares", "Bautismos", "Confirmaciones", "Recepciones", "Transferencias", "Restauraciones", "Muertes", "Traslados",
+                "Otras Causas (Perdidas)", "Celebraciones"]
+
+    def getDataList(self):
+        return [str(self.churchName), str(self.totalReports), str(self.totalAssistants), str(self.totalCommulgants), str(self.totalSimpleColones),
+                str(self.totalSimpleDollars), str(self.totalDesignatedColones), str(self.totalDesignatedDollars), str(self.totalPromiseColones),
+                str(self.totalPromiseDollars), str(self.totalBaptisms), str(self.totalConfirmations), str(self.totalReceptions), str(self.totalTransfers),
+                str(self.totalRestores), str(self.totalDeaths), str(self.totalTransfers), str(self.totalOtherLosses), str(self.totalServices)]
+
 class IndividualDataRow:
 
     def __init__(self, formName, assistants, comulgants, simpleColones, 
                 simpleDollars, designatedColones, designatedDollars, promiseColones, promiseDollars,
-                baptisms, confirmations, receptions, transfers, restorations, deaths, moves, otherLosses):
+                baptisms, confirmations, receptions, transfers, restorations, deaths, moves, otherLosses, amountOfServices):
                 self.formName = formName
                 self.assistants = assistants
                 self.comulgants = comulgants
@@ -154,15 +203,54 @@ class IndividualDataRow:
                 self.deaths = deaths
                 self.moves = moves
                 self.otherLosses = otherLosses
+                self.amountOfServices = amountOfServices
 
-    def getHeaderList(self):
+    @staticmethod
+    def getHeaderList():
         return ["Nombre Formulario", "Asistentes", "Comulgantes", "Ofrenda Simple Colones",
                 "Ofrenda Simple Dolares", "Ofrenda Designada Colones", "Ofrenda Designada Dolares",
                 "Promesas Colones", "Promesas Dolares", "Bautismos", "Confirmaciones", "Recepciones",
-                "Transferencias", "Restauraciones", "Muertes", "Traslados", "Otras Causas (Perdidas)"]
+                "Transferencias", "Restauraciones", "Muertes", "Traslados", "Otras Causas (Perdidas)", "Total Celebraciones"]
 
     def getDataList(self):
         return [str(self.formName), str(self.assistants), str(self.comulgants), str(self.simpleColones),
-                str(self.simpleDollars), str(self.designatedColones), str(self.designatedColones), str(self.designatedDollars),
+                str(self.simpleDollars), str(self.designatedColones), str(self.designatedDollars),
                 str(self.promiseColones), str(self.promiseDollars), str(self.baptisms), str(self.confirmations), str(self.receptions),
-                str(self.transfers), str(self.restorations), str(self.deaths), str(self.moves), str(self.otherLosses)]
+                str(self.transfers), str(self.restorations), str(self.deaths), str(self.moves), str(self.otherLosses), 
+                str(self.amountOfServices)]
+
+class IndividualFormRow:
+        def __init__(self, churchName, personWhoFills, assistants, comulgants, simpleColones, 
+                simpleDollars, designatedColones, designatedDollars, promiseColones, promiseDollars,
+                baptisms, confirmations, receptions, transfers, restorations, deaths, moves, otherLosses):
+                self.personWhoFills = personWhoFills
+                self.churchName = churchName
+                self.assistants = assistants
+                self.comulgants = comulgants
+                self.simpleColones = simpleColones
+                self.simpleDollars = simpleDollars
+                self.designatedColones = designatedColones
+                self.designatedDollars = designatedDollars
+                self.promiseColones = promiseColones
+                self.promiseDollars = promiseDollars
+                self.baptisms = baptisms
+                self.confirmations = confirmations
+                self.receptions = receptions
+                self.transfers = transfers
+                self.restorations = restorations
+                self.deaths = deaths
+                self.moves = moves
+                self.otherLosses = otherLosses
+
+        @staticmethod
+        def getHeaderList():
+            return ["Nombre Iglesia", "Persona Que Llena Formulario", "Asistentes", "Comulgantes", "Ofrenda Simple Colones",
+                    "Ofrenda Simple Dolares", "Ofrenda Designada Colones", "Ofrenda Designada Dolares",
+                    "Promesas Colones", "Promesas Dolares", "Bautismos", "Confirmaciones", "Recepciones",
+                    "Transferencias", "Restauraciones", "Muertes", "Traslados", "Otras Causas (Perdidas)"]
+
+        def getDataList(self):
+            return [str(self.churchName), str(self.personWhoFills), str(self.assistants), str(self.comulgants), str(self.simpleColones),
+                    str(self.simpleDollars), str(self.designatedColones), str(self.designatedDollars),
+                    str(self.promiseColones), str(self.promiseDollars), str(self.baptisms), str(self.confirmations), str(self.receptions),
+                    str(self.transfers), str(self.restorations), str(self.deaths), str(self.moves), str(self.otherLosses)]
