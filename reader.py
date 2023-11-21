@@ -56,7 +56,7 @@ try:
     folders = []
     page_token = None
     while True:
-        foldersResponse = drive_service.files().list(q="'"+ FORM_FOLDER_ID +"' in parents",
+        foldersResponse = drive_service.files().list(q="'"+ FORM_FOLDER_ID +"' in parents and mimeType = 'application/vnd.google-apps.folder'",
                                         spaces='drive',
                                         fields='nextPageToken, '
                                                 'files(id, name)',
