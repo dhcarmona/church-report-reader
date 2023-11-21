@@ -8,8 +8,11 @@ import json
 import csv
 from apiclient import discovery
 from httplib2 import Http
-from oauth2client import client, file, tools
+#from oauth2client import client, file, tools
 from googleapiclient.errors import HttpError
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
 from church import ChurchResponse, CummulativeDataRow, IndividualDataRow, IndividualFormRow
 from os import path
 
@@ -17,18 +20,30 @@ formIds = []
 forms = []
 churchNames = []
 
-store = file.Storage('token.json')
 creds = None
-if not creds or creds.invalid:
-    flow = client.flow_from_clientsecrets('credentials.json', SCOPES)
-    creds = tools.run_flow(flow, store)
+    # The file token.json stores the user's access and refresh tokens, and is
+    # created automatically when the authorization flow completes for the first
+    # time.
+if path.exists('token.json'):
+    print("Previous token exists.")
+    creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+    print(creds)
+    print(creds.__dict__)
+# If there are no (valid) credentials available, let the user log in.
+if not creds or not creds.valid:
+    if creds and creds.expired and creds.refresh_token:
+        creds.refresh(Request())
+    else:
+        flow = InstalledAppFlow.from_client_secrets_file(
+            'credentials.json', SCOPES)
+        creds = flow.run_local_server(port=0)
+    # Save the credentials for the next run
+    with open('token.json', 'w') as token:
+        token.write(creds.to_json())
 
-form_service = discovery.build('forms', 'v1', http=creds.authorize(
-    Http()), discoveryServiceUrl=FORMS_DISCOVERY_DOC, static_discovery=False)
+form_service = discovery.build('forms', 'v1', credentials=creds)
 
-drive_service = discovery.build('drive', 'v3', http=creds.authorize(
-    Http()), static_discovery=False)
-
+drive_service = discovery.build('drive', 'v3', credentials=creds)
 print(" ---- Lector de Formularios: Iglesia Episcopal Costarricense ----")
 print(" ")
 print(" ")
@@ -80,7 +95,7 @@ print(" ")
 
 for formId in formIds:
     form = form_service.forms().get(formId=formId).execute()
-    formName = form['info']['title']
+    formName = form['info']['documentTitle']
     print("Leido formulario con nombre: " + formName)
     forms.append(form)
 
@@ -96,7 +111,7 @@ if forms and not churchNamesSet:
     print("")
     form = forms[0]
     for item in form.get("items"):
-        if item.get("title") == CHURCH_QUESTION_TITLE:
+        if CHURCH_QUESTION_ID in item.get("title"):
             for option in item.get("questionItem").get("question").get("choiceQuestion").get("options"):
                 churchNames.append(option.get("value"))
             churchNamesSet = True
@@ -129,6 +144,10 @@ def getQuestionIds(form):
         elif ("comulgaron") in questionTitle:
             questionIds[COMMULGANTS_PREFIX+str(commulgantIndex)] = item.get("questionItem").get("question").get("questionId")
             commulgantIndex = commulgantIndex + 1
+        elif ("realizaron entre semana") in questionTitle:
+            questionIds[WEEKDAY_SERVICES] = item.get("questionItem").get("question").get("questionId")
+        elif ("realizaron el fin de semana") in questionTitle:
+            questionIds[WEEKEND_SERVICES] = item.get("questionItem").get("question").get("questionId")
         elif ("Ofrenda Simple - Colones") in questionTitle:
             questionIds[SIMPLE_COLONES] = item.get("questionItem").get("question").get("questionId")
         elif ("Ofrenda Simple - Dólares") in questionTitle:
@@ -172,7 +191,7 @@ if click.confirm("Escribir archivo por formulario?", default=True):
 for form in forms:
     print(" ")
     #print(json.dumps(form, indent=4))
-    formName = form['info']['title']
+    formName = form['info']['documentTitle']
     formName.replace("//", "-")
     formName.replace("\/", "-")
     fileName = path.relpath('reportesPorFormulario/reporte_'+formName+'.csv')
@@ -239,7 +258,7 @@ if click.confirm("Imprimir reporte de llenado por iglesia?", default=False):
         print(" Formularios Faltantes para Iglesia: " + church)
         try:
             for missingForm in formsMissingPerChurch[church]:
-                print(" -- " + missingForm['info']['title'])
+                print(" -- " + missingForm['info']['documentTitle'])
                 print(" -- Enlace para llenarlo: " + missingForm.get("responderUri"))
         except KeyError:
             print("Esta iglesia no tiene ningun formulario faltante.")
@@ -275,7 +294,9 @@ if click.confirm("Imprimir y escribir acumulados por iglesia?", default=True):
             totalDeaths = 0
             totalMoves = 0
             totalOtherLosses = 0
-            totalServices = 0
+            totalWeekdayServices = 0
+            totalWeekendServices = 0
+
             for response in responsesPerChurch[church]:
                 totalReports = totalReports + 1
                 totalAssistance = totalAssistance + response.totalAssistants
@@ -294,12 +315,13 @@ if click.confirm("Imprimir y escribir acumulados por iglesia?", default=True):
                 totalDeaths = totalDeaths + response.deaths
                 totalMoves = totalMoves + response.moves
                 totalOtherLosses = totalOtherLosses + response.otherLosses
-                totalServices = totalServices + response.amountOfServices
+                totalWeekdayServices = totalWeekdayServices + response.amountOfWeekdayServices
+                totalWeekendServices = totalWeekendServices + response.amountOfWeekendServices
 
-            cummulativeDataRow = CummulativeDataRow(church, totalReports, totalAssistance, totalCommulgants, totalSimpleColones, totalSimpleDollars,
+            cummulativeDataRow = CummulativeDataRow(church, totalReports, totalAssistance, totalCommulgants, totalSimpleColones,            totalSimpleDollars,
                                                     totalDesignatedColones, totalDesignatedDollars, totalPromiseColones, totalPromiseDollars,
                                                     totalBaptisms, totalConfirmations, totalReceptions, totalTransfers, totalRestores,
-                                                    totalDeaths, totalMoves, totalOtherLosses, totalServices)
+                                                    totalDeaths, totalMoves, totalOtherLosses, totalWeekdayServices, totalWeekendServices)
 
             print("---- Acumulados para Iglesia: " + church)
             print(" - Total de formularios procesados para esta iglesia: " + str(len(responsesPerChurch[church])))
@@ -311,6 +333,9 @@ if click.confirm("Imprimir y escribir acumulados por iglesia?", default=True):
             print(" - Total ofrenda designada dolares en todo el periodo: $" + str(totalDesignatedDollars))
             print(" - Total promesa colones en todo el periodo: " + str(totalPromiseColones))
             print(" - Total promesa dolares en todo el periodo: $" + str(totalPromiseDollars))
+            print(" - Total celebraciones entre semana en todo el periodo: " + str(totalWeekdayServices))
+            print(" - Total celebraciones fin de semana en todo el periodo: " + str(totalWeekendServices))
+
             print(" -------- ")
             writer.writerow(cummulativeDataRow.getDataList())
 

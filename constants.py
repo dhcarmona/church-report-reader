@@ -11,6 +11,8 @@ CELEBRANT_PREFIX = "celebrant"
 ASSISTANTS_PREFIX = "assistants"
 COMMULGANTS_PREFIX = "commulgants"
 PERSON_IN_CHARGE = "personInCharge"
+WEEKDAY_SERVICES = "weekdayServices"
+WEEKEND_SERVICES = "weekendServices"
 
 # Offerings
 DESIGNATED_OFFERING_COLONES = "designatedColones"
@@ -34,4 +36,5 @@ MOVES = "moves"
 OTHER_LOSSES = "otherLosses"
 
 FORM_FOLDER_ID = '13GJ86ikI8fvpM975FIyDQUI3hlnlhrfu'
+DESTINATION_FOLDER_ID = '1rCaL00QqV2Z_ziuvcKBv67dHHxMocMCD'
 
