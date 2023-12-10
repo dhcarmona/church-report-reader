@@ -57,14 +57,10 @@ print(" ")
 print(" ")
 
 def getBooleanConfig(key, question):
-    print(" ---- Getting config for ----")
-    print(key)
     setting = False
     try:
         setting = configData[key] == "true"
-        print("true")
     except:
-        print("asking")
         setting = click.confirm(question, default=True)
     return setting
 
