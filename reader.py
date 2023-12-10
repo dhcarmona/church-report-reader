@@ -19,16 +19,23 @@ from os import path
 formIds = []
 forms = []
 churchNames = []
+config = None
+
+print("")
+print("Leyendo configuracion...")
+print("")
+configFile = open('/Users/dhcarmona/config.json')
+configData = json.load(configFile)
+print("Leida configuracion:")
+print(configData)
+
 
 creds = None
     # The file token.json stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
     # time.
 if path.exists('token.json'):
-    print("Previous token exists.")
     creds = Credentials.from_authorized_user_file('token.json', SCOPES)
-    print(creds)
-    print(creds.__dict__)
 # If there are no (valid) credentials available, let the user log in.
 if not creds or not creds.valid:
     if creds and creds.expired and creds.refresh_token:
@@ -49,14 +56,26 @@ print(" ")
 print(" ")
 print(" ")
 
-processAllFiles = click.confirm("Procesar TODOS los archivos de cada folder? Si escoge No, se preguntara por cada archivo individualmente", default=True)
+def getBooleanConfig(key, question):
+    print(" ---- Getting config for ----")
+    print(key)
+    setting = False
+    try:
+        setting = configData[key] == "true"
+        print("true")
+    except:
+        print("asking")
+        setting = click.confirm(question, default=True)
+    return setting
+
+processAllFiles = getBooleanConfig("processAllFilesInFolder","Procesar TODOS los archivos de cada folder? Si escoge No, se preguntara por cada archivo individualmente")
 
 try:
     files = []
     folders = []
     page_token = None
     while True:
-        foldersResponse = drive_service.files().list(q="'"+ FORM_FOLDER_ID +"' in parents and mimeType = 'application/vnd.google-apps.folder'",
+        foldersResponse = drive_service.files().list(q="'"+ configData["formFolderId"] +"' in parents and mimeType = 'application/vnd.google-apps.folder'",
                                         spaces='drive',
                                         fields='nextPageToken, '
                                                 'files(id, name)',
@@ -115,7 +134,6 @@ if forms and not churchNamesSet:
             for option in item.get("questionItem").get("question").get("choiceQuestion").get("options"):
                 churchNames.append(option.get("value"))
             churchNamesSet = True
-            
 
 for name in churchNames:
     print(name)
@@ -183,10 +201,7 @@ formsMissingPerChurch = {}
 formsFilledPerChurch = {}
 responsesPerChurch = {}
 
-writeFilePerForm = False
-
-if click.confirm("Escribir archivo por formulario?", default=True):
-    writeFilePerForm = True
+writeFilePerForm = getBooleanConfig("writeFilePerForm", "Escribir archivo por formulario?")
 
 for form in forms:
     print(" ")
@@ -246,8 +261,9 @@ for form in forms:
                     formsMissingPerChurch[church] = []
                 formsMissingPerChurch[church].append(form)
 
+writeFilloutReport = getBooleanConfig("writeFilloutReport", "Imprimir reporte de llenado por iglesia?")
 
-if click.confirm("Imprimir reporte de llenado por iglesia?", default=False):
+if writeFilloutReport:
     print("")
     print(" -- REPORTE DE LLENADO POR IGLESIA - FORMULARIOS FALTANTES ")
     print("------")
@@ -263,8 +279,9 @@ if click.confirm("Imprimir reporte de llenado por iglesia?", default=False):
         except KeyError:
             print("Esta iglesia no tiene ningun formulario faltante.")
 
+writeCummulativeReportPerChurch = getBooleanConfig("writeCummulativeReportPerChurch", "Imprimir y escribir acumulados por iglesia?")
 
-if click.confirm("Imprimir y escribir acumulados por iglesia?", default=True):
+if writeCummulativeReportPerChurch:
     print("")
     print(" -- REPORTE DE ACUMULADOS POR IGLESIA")
     print("------")
@@ -339,7 +356,9 @@ if click.confirm("Imprimir y escribir acumulados por iglesia?", default=True):
             print(" -------- ")
             writer.writerow(cummulativeDataRow.getDataList())
 
-if click.confirm("Escribir reporte por formulario, por iglesia?", default=False):
+writeIndividualChurchForm = getBooleanConfig("writeIndividualChurchForm", "Escribir reporte por formulario, por iglesia?")
+
+if writeIndividualChurchForm:
     print("")
     print(" -- REPORTE INDIVIDUAL POR IGLESIA")
     print("------")
@@ -352,3 +371,7 @@ if click.confirm("Escribir reporte por formulario, por iglesia?", default=False)
             for response in responsesPerChurch[church]:
                 # write the data
                 writer.writerow(response.individualDataRow.getDataList())
+
+    print("")
+    print(" -- Leyendo correos de iglesias")
+    print("------")
