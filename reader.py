@@ -54,12 +54,8 @@ print(configData)
 
 
 creds = None
-    # The file token.json stores the user's access and refresh tokens, and is
-    # created automatically when the authorization flow completes for the first
-    # time.
 if path.exists('token.json'):
     creds = Credentials.from_authorized_user_file('token.json', SCOPES)
-# If there are no (valid) credentials available, let the user log in.
 if not creds or not creds.valid:
     if creds and creds.expired and creds.refresh_token:
         creds.refresh(Request())
@@ -361,7 +357,7 @@ if writeCummulativeReportPerChurch:
                                                     totalDeaths, totalMoves, totalOtherLosses, totalWeekdayServices, totalWeekendServices)
 
             report = ""
-            report = report + "---- Acumulados para Iglesia: " + church + " con corte al " + fecha + "\n"
+            report = report + "---- \nAcumulados para Iglesia: " + church + " con corte al " + fecha + "\n"
             report = report + " - Total de formularios procesados para esta congregacion: " + str(len(responsesPerChurch[church]))  + "\n"
             report = report + " - Total asistentes en todo el periodo: " + str(totalAssistance)  + "\n"
             report = report + " - Total comulgantes en todo el periodo: " + str(totalCommulgants)  + "\n"
@@ -378,9 +374,9 @@ if writeCummulativeReportPerChurch:
 
 writeIndividualChurchForm = getBooleanConfig("writeIndividualChurchForm", "Escribir reporte por formulario, por iglesia?")
 
-def sendEmail(email, churchName, emailData):
+def sendIndividualChurchEmail(email, churchName, emailData):
     emailSender = EmailSender(gmail_service)
-    emailSender.sendEmail(email, churchName, emailData, fecha)
+    emailSender.sendIndividualChurchEmail(email, churchName, emailData, fecha)
 
 if writeIndividualChurchForm:
     print("")
@@ -394,9 +390,12 @@ if writeIndividualChurchForm:
             writer.writerow(IndividualDataRow.getHeaderList())
             for response in responsesPerChurch[church]:
                 writer.writerow(response.individualDataRow.getDataList())
+        #Add file to send as attachment
+        emailPerChurch[church]["attachments"] = []
+        emailPerChurch[church]["attachments"].append(fileName)      
 
     print("")
-    print(" -- Leyendo correos de iglesias")
+    print(" -- Enviando correos a iglesias")
     print("------")
     emails = configData["churchEmails"]
     for church in churchNames:
@@ -404,7 +403,7 @@ if writeIndividualChurchForm:
             churchEmail = emails[church]
             if churchEmail:
                 print("Correo para iglesia: " + church + " es " + churchEmail)
-                sendEmail(churchEmail, church, emailPerChurch[church])
+                sendIndividualChurchEmail(churchEmail, church, emailPerChurch[church])
         except Exception as e:
             print("Error enviando correo")
             print(e)
