@@ -35,7 +35,6 @@ class ChurchResponse:
         return 0
 
     def __init__(self, formResponse, questionIds, formName):
-        #print(json.dumps(formResponse, indent=4))
 
         # Get general form data
         answers = formResponse.get("answers")
@@ -62,7 +61,6 @@ class ChurchResponse:
         self.amountOfWeekendServices = 0
 
         # Get financial form data
-        #print(json.dumps(questionIds, indent = 4))
         self.simpleColones = self.getAnswerIfExists(SIMPLE_COLONES, questionIds, answers)        
         self.simpleDollars = self.getAnswerIfExists(SIMPLE_DOLLARS, questionIds, answers)        
         self.designatedColones = self.getAnswerIfExists(DESIGNATED_OFFERING_COLONES, questionIds, answers)
@@ -102,7 +100,6 @@ class ChurchResponse:
                 # There's a week with this index
                 assistantsAnswer = answers[questionIds[ASSISTANTS_PREFIX+str(index)]]
                 assistantsAnswerValue = self.getAnswerValue(assistantsAnswer)
-                print("-- Asistentes a la semana "+ str(index) +": " + assistantsAnswerValue)
                 try:
                     self.totalAssistants = self.totalAssistants + int(assistantsAnswerValue)
                 except ValueError:
@@ -110,7 +107,6 @@ class ChurchResponse:
 
                 commulgantsAnswer = answers[questionIds[COMMULGANTS_PREFIX+str(index)]]
                 commulgantsAnswerValue = self.getAnswerValue(commulgantsAnswer)
-                print("-- Comulgantes para la semana: " + commulgantsAnswerValue)
                 try:
                     self.totalCommulgants = self.totalCommulgants + int(commulgantsAnswerValue)
                 except ValueError:
@@ -120,7 +116,6 @@ class ChurchResponse:
             else:
                 break
                 
-        #print(json.dumps(self.__dict__, indent = 4))
         self.individualDataRow = IndividualDataRow(self.formName, self.totalAssistants, self.totalCommulgants, self.simpleColones,
                                 self.simpleDollars, self.designatedColones, self.designatedDollars, self.promiseColones,
                                 self.promiseDollars, self.baptisms, self.confirmations, self.receptions, self.transfers,

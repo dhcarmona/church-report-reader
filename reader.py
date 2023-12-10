@@ -6,20 +6,43 @@ import google.auth
 import click
 import json
 import csv
+import os
 from apiclient import discovery
 from httplib2 import Http
-#from oauth2client import client, file, tools
 from googleapiclient.errors import HttpError
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from church import ChurchResponse, CummulativeDataRow, IndividualDataRow, IndividualFormRow
+from EmailSender import EmailSender
+from datetime import date
+
 from os import path
 
 formIds = []
 forms = []
 churchNames = []
 config = None
+emailPerChurch = {}
+
+fecha = date.today().strftime('%d-%m-%Y')
+
+
+print("Limpiando archivos viejos...")
+churchFileDirectory = "reportesPorIglesia"
+formFileDirectory = "reportesPorFormulario"
+filesInChurchDirectory = os.listdir(churchFileDirectory)
+filesInFormDirectory = os.listdir(formFileDirectory)
+for file in filesInChurchDirectory:
+    path_to_file = os.path.join(churchFileDirectory, file)
+    print("Borrando archivo " + path_to_file)
+    os.remove(path_to_file)
+
+for file in filesInFormDirectory:
+    path_to_file = os.path.join(formFileDirectory, file)
+    print("Borrando archivo " + path_to_file)
+    os.remove(path_to_file)
+
 
 print("")
 print("Leyendo configuracion...")
@@ -49,10 +72,11 @@ if not creds or not creds.valid:
         token.write(creds.to_json())
 
 form_service = discovery.build('forms', 'v1', credentials=creds)
-
 drive_service = discovery.build('drive', 'v3', credentials=creds)
+gmail_service = discovery.build("gmail", "v1", credentials=creds)
+
+
 print(" ---- Lector de Formularios: Iglesia Episcopal Costarricense ----")
-print(" ")
 print(" ")
 print(" ")
 
@@ -133,6 +157,7 @@ if forms and not churchNamesSet:
 
 for name in churchNames:
     print(name)
+    emailPerChurch[name] = {}
 
 def getQuestionIds(form):
     questionIds = {}
@@ -190,7 +215,6 @@ def getQuestionIds(form):
             questionIds[MOVES] = item.get("questionItem").get("question").get("questionId")
         elif ("Otras causas") in questionTitle:
             questionIds[OTHER_LOSSES] = item.get("questionItem").get("question").get("questionId")
-    # print(json.dumps(questionIds, indent=4))
     return questionIds
 
 formsMissingPerChurch = {}
@@ -201,7 +225,6 @@ writeFilePerForm = getBooleanConfig("writeFilePerForm", "Escribir archivo por fo
 
 for form in forms:
     print(" ")
-    #print(json.dumps(form, indent=4))
     formName = form['info']['documentTitle']
     formName.replace("//", "-")
     formName.replace("\/", "-")
@@ -229,7 +252,6 @@ for form in forms:
             writer.writerow(IndividualFormRow.getHeaderList())
         for response in responseList:
             churchResponse = ChurchResponse(response, questionIds, formName)
-            #print(json.dumps(response, indent=4))
             try:
                 responseAnswers = response.get("answers")
                 churchQuestionAnswer = responseAnswers.get(churchQuestionId)
@@ -252,7 +274,7 @@ for form in forms:
                 print(e)
         for church in churchNames:
             if not church in churchesWhoAnsweredThisForm:
-                # print ("--- IGLESIA " + church + " NO RESPONDIO ESTE FORMULARIO -- ")
+                print ("--- IGLESIA " + church + " NO RESPONDIO ESTE FORMULARIO -- ")
                 if not church in formsMissingPerChurch:
                     formsMissingPerChurch[church] = []
                 formsMissingPerChurch[church].append(form)
@@ -265,15 +287,17 @@ if writeFilloutReport:
     print("------")
 
     for church in churchNames:
-        print("")
-        print("------")
-        print(" Formularios Faltantes para Iglesia: " + church)
+        report = ""
+        report = report + "------\n"
+        report = report + " Formularios Faltantes para Congregación: " + church + "\n"
         try:
             for missingForm in formsMissingPerChurch[church]:
-                print(" -- " + missingForm['info']['documentTitle'])
-                print(" -- Enlace para llenarlo: " + missingForm.get("responderUri"))
+                report = report + " -- " + missingForm['info']['documentTitle'] + "\n"
+                report = report + " -- Enlace para llenarlo: " + missingForm.get("responderUri") + "\n"
         except KeyError:
-            print("Esta iglesia no tiene ningun formulario faltante.")
+            report = report + "Esta congregación no tiene ningun formulario faltante.\n"
+        print(report)
+        emailPerChurch[church]["fillOutReport"] = report
 
 writeCummulativeReportPerChurch = getBooleanConfig("writeCummulativeReportPerChurch", "Imprimir y escribir acumulados por iglesia?")
 
@@ -336,23 +360,27 @@ if writeCummulativeReportPerChurch:
                                                     totalBaptisms, totalConfirmations, totalReceptions, totalTransfers, totalRestores,
                                                     totalDeaths, totalMoves, totalOtherLosses, totalWeekdayServices, totalWeekendServices)
 
-            print("---- Acumulados para Iglesia: " + church)
-            print(" - Total de formularios procesados para esta iglesia: " + str(len(responsesPerChurch[church])))
-            print(" - Total asistentes en todo el periodo: " + str(totalAssistance))
-            print(" - Total comulgantes en todo el periodo: " + str(totalCommulgants))
-            print(" - Total ofrenda simple colones en todo el periodo: " + str(totalSimpleColones))
-            print(" - Total ofrenda simple dolares en todo el periodo: $" + str(totalSimpleDollars))
-            print(" - Total ofrenda designada colones en todo el periodo: " + str(totalDesignatedColones))
-            print(" - Total ofrenda designada dolares en todo el periodo: $" + str(totalDesignatedDollars))
-            print(" - Total promesa colones en todo el periodo: " + str(totalPromiseColones))
-            print(" - Total promesa dolares en todo el periodo: $" + str(totalPromiseDollars))
-            print(" - Total celebraciones entre semana en todo el periodo: " + str(totalWeekdayServices))
-            print(" - Total celebraciones fin de semana en todo el periodo: " + str(totalWeekendServices))
-
-            print(" -------- ")
+            report = ""
+            report = report + "---- Acumulados para Iglesia: " + church + " con corte al " + fecha + "\n"
+            report = report + " - Total de formularios procesados para esta congregacion: " + str(len(responsesPerChurch[church]))  + "\n"
+            report = report + " - Total asistentes en todo el periodo: " + str(totalAssistance)  + "\n"
+            report = report + " - Total comulgantes en todo el periodo: " + str(totalCommulgants)  + "\n"
+            report = report + " - Total ofrenda simple colones en todo el periodo: ₡ " + str(totalSimpleColones)  + "\n"
+            report = report + " - Total ofrenda simple dolares en todo el periodo: $ " + str(totalSimpleDollars)  + "\n"
+            report = report + " - Total ofrenda designada colones en todo el periodo: ₡ " + str(totalDesignatedColones)  + "\n"
+            report = report + " - Total ofrenda designada dolares en todo el periodo: $ " + str(totalDesignatedDollars)  + "\n"
+            report = report + " - Total promesa colones en todo el periodo: ₡ " + str(totalPromiseColones)  + "\n"
+            report = report + " - Total promesa dolares en todo el periodo: $ " + str(totalPromiseDollars)  + "\n"
+            report = report + " - Total celebraciones entre semana en todo el periodo: " + str(totalWeekdayServices)  + "\n"
+            report = report + " - Total celebraciones fin de semana en todo el periodo: " + str(totalWeekendServices)  + "\n"
+            emailPerChurch[church]["cummulativeReport"] = report
             writer.writerow(cummulativeDataRow.getDataList())
 
 writeIndividualChurchForm = getBooleanConfig("writeIndividualChurchForm", "Escribir reporte por formulario, por iglesia?")
+
+def sendEmail(email, churchName, emailData):
+    emailSender = EmailSender(gmail_service)
+    emailSender.sendEmail(email, churchName, emailData, fecha)
 
 if writeIndividualChurchForm:
     print("")
@@ -365,9 +393,18 @@ if writeIndividualChurchForm:
             writer = csv.writer(f)
             writer.writerow(IndividualDataRow.getHeaderList())
             for response in responsesPerChurch[church]:
-                # write the data
                 writer.writerow(response.individualDataRow.getDataList())
 
     print("")
     print(" -- Leyendo correos de iglesias")
     print("------")
+    emails = configData["churchEmails"]
+    for church in churchNames:
+        try:
+            churchEmail = emails[church]
+            if churchEmail:
+                print("Correo para iglesia: " + church + " es " + churchEmail)
+                sendEmail(churchEmail, church, emailPerChurch[church])
+        except Exception as e:
+            print("Error enviando correo")
+            print(e)
