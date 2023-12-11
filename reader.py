@@ -24,6 +24,12 @@ forms = []
 churchNames = []
 config = None
 emailPerChurch = {}
+globalFileName = path.relpath('reporte_total.csv')
+globalFileName = globalFileName.replace("(", "")
+globalFileName = globalFileName.replace(")", "")
+
+globalEmailData = {}
+globalEmailData["attachments"] = []
 
 fecha = date.today().strftime('%d-%m-%Y')
 
@@ -43,11 +49,15 @@ for file in filesInFormDirectory:
     print("Borrando archivo " + path_to_file)
     os.remove(path_to_file)
 
+path_to_global_file = os.path.join("", globalFileName)
+print("Borrando archivo " + path_to_global_file)
+os.remove(path_to_global_file)
+
 
 print("")
 print("Leyendo configuracion...")
 print("")
-configFile = open('/Users/dhcarmona/config.json')
+configFile = open('/Users/dhcarmona/config-prueba.json')
 configData = json.load(configFile)
 print("Leida configuracion:")
 print(configData)
@@ -79,7 +89,7 @@ print(" ")
 def getBooleanConfig(key, question):
     setting = False
     try:
-        setting = configData[key] == "true"
+        setting = configData.get(key) == "true"
     except:
         setting = click.confirm(question, default=True)
     return setting
@@ -274,6 +284,7 @@ for form in forms:
                 if not church in formsMissingPerChurch:
                     formsMissingPerChurch[church] = []
                 formsMissingPerChurch[church].append(form)
+        globalEmailData["attachments"].append(fileName)
 
 writeFilloutReport = getBooleanConfig("writeFilloutReport", "Imprimir reporte de llenado por iglesia?")
 
@@ -301,11 +312,11 @@ if writeCummulativeReportPerChurch:
     print("")
     print(" -- REPORTE DE ACUMULADOS POR IGLESIA")
     print("------")
-    fileName = path.relpath('reporte_total.csv')
-    fileName = fileName.replace("(", "")
-    fileName = fileName.replace(")", "")
-    print(" - Escribiendo a archivo: " + fileName)
-    with open(fileName, 'w', encoding='UTF8', newline='') as f:
+    globalFileName = path.relpath('reporte_total.csv')
+    globalFileName = globalFileName.replace("(", "")
+    globalFileName = globalFileName.replace(")", "")
+    print(" - Escribiendo a archivo: " + globalFileName)
+    with open(globalFileName, 'w', encoding='UTF8', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(CummulativeDataRow.getHeaderList())
         for church in responsesPerChurch.keys():
@@ -378,6 +389,11 @@ def sendIndividualChurchEmail(email, churchName, emailData):
     emailSender = EmailSender(gmail_service)
     emailSender.sendIndividualChurchEmail(email, churchName, emailData, fecha)
 
+def sendGlobalEmail(email, emailData):
+    emailSender = EmailSender(gmail_service)
+    emailSender.sendGlobalReportEmail(email, emailData, fecha)
+
+
 if writeIndividualChurchForm:
     print("")
     print(" -- REPORTE INDIVIDUAL POR IGLESIA")
@@ -393,6 +409,7 @@ if writeIndividualChurchForm:
         #Add file to send as attachment
         emailPerChurch[church]["attachments"] = []
         emailPerChurch[church]["attachments"].append(fileName)      
+        globalEmailData["attachments"].append(fileName)
 
     print("")
     print(" -- Enviando correos a iglesias")
@@ -407,3 +424,11 @@ if writeIndividualChurchForm:
         except Exception as e:
             print("Error enviando correo")
             print(e)
+
+    print("")
+    print(" -- Enviando correo a oficina")
+    print("------")
+    email = configData.get("globalReportEmail")
+
+    globalEmailData["attachments"].append(globalFileName)
+    sendGlobalEmail(email, globalEmailData)
