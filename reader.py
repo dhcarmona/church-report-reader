@@ -2,35 +2,26 @@ from __future__ import print_function
 from urllib import response
 
 from constants import *
-import google.auth
-import click
-import json
 import csv
 import os
-from apiclient import discovery
-from httplib2 import Http
-from googleapiclient.errors import HttpError
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
 from church import ChurchResponse, CummulativeDataRow, IndividualDataRow, IndividualFormRow
 from EmailSender import EmailSender
+from GoogleAPIService import GoogleAPIService
+from FormDataRetriever import FormDataRetriever
+from SettingsRetriever import SettingsRetriever
 from datetime import date
-
 from os import path
 
-formIds = []
-forms = []
+# Globals. TODO: refactor most of these
+
 churchNames = []
 config = None
 emailPerChurch = {}
 globalFileName = path.relpath('reporte_total.csv')
 globalFileName = globalFileName.replace("(", "")
 globalFileName = globalFileName.replace(")", "")
-
 globalEmailData = {}
 globalEmailData["attachments"] = []
-
 fecha = date.today().strftime('%d-%m-%Y')
 
 
@@ -51,98 +42,35 @@ for file in filesInFormDirectory:
 
 path_to_global_file = os.path.join("", globalFileName)
 print("Borrando archivo " + path_to_global_file)
-os.remove(path_to_global_file)
-
+try:
+    os.remove(path_to_global_file)
+except FileNotFoundError as fnfe:
+    print("Global file doesn't exist.")
 
 print("")
 print("Leyendo configuracion...")
-print("")
-configFile = open('/Users/dhcarmona/config-prueba.json')
-configData = json.load(configFile)
-print("Leida configuracion:")
-print(configData)
-
-
-creds = None
-if path.exists('token.json'):
-    creds = Credentials.from_authorized_user_file('token.json', SCOPES)
-if not creds or not creds.valid:
-    if creds and creds.expired and creds.refresh_token:
-        creds.refresh(Request())
-    else:
-        flow = InstalledAppFlow.from_client_secrets_file(
-            'credentials.json', SCOPES)
-        creds = flow.run_local_server(port=0)
-    # Save the credentials for the next run
-    with open('token.json', 'w') as token:
-        token.write(creds.to_json())
-
-form_service = discovery.build('forms', 'v1', credentials=creds)
-drive_service = discovery.build('drive', 'v3', credentials=creds)
-gmail_service = discovery.build("gmail", "v1", credentials=creds)
-
-
+settings = SettingsRetriever("/Users/dhcarmona/config-prueba.json")
+print("Leida configuracion.")
+print(" ")
+print(" ")
 print(" ---- Lector de Formularios: Iglesia Episcopal Costarricense ----")
 print(" ")
 print(" ")
 
-def getBooleanConfig(key, question):
-    setting = False
-    try:
-        setting = configData.get(key) == "true"
-    except:
-        setting = click.confirm(question, default=True)
-    return setting
-
-processAllFiles = getBooleanConfig("processAllFilesInFolder","Procesar TODOS los archivos de cada folder? Si escoge No, se preguntara por cada archivo individualmente")
-
-try:
-    files = []
-    folders = []
-    page_token = None
-    while True:
-        foldersResponse = drive_service.files().list(q="'"+ configData["formFolderId"] +"' in parents and mimeType = 'application/vnd.google-apps.folder'",
-                                        spaces='drive',
-                                        fields='nextPageToken, '
-                                                'files(id, name)',
-                                        pageToken=page_token).execute()
-        folders.extend(foldersResponse.get('files', []))
-        page_token = foldersResponse.get('nextPageToken', None)
-        if page_token is None:
-            break
-
-    for folder in folders:
-        print("Procesando folder "+ folder.get("name"))
-        if not click.confirm("Procesar archivos del folder "+ folder.get("name") +"?"):
-            continue
-        while True:
-            filesResponse = drive_service.files().list(q="'"+ folder.get("id")+"' in parents AND mimeType='application/vnd.google-apps.form'",
-                                                    spaces='drive',
-                                                    fields='nextPageToken, '
-                                                            'files(id, name)',
-                                                    pageToken=page_token).execute()
-            for file in filesResponse.get('files', []):
-                print(F'Encontrado archivo: {file.get("name")}, {file.get("id")}')
-                files.extend(filesResponse.get('files', []))
-                if processAllFiles:
-                    formIds.append(file.get("id"))
-                elif click.confirm("Procesar este archivo?", default=True):
-                    formIds.append(file.get("id"))
-            page_token = filesResponse.get('nextPageToken', None)
-            if page_token is None:
-                break
-
-except HttpError as error:
-    print(F'Error: {error}')
+googleApiService = GoogleAPIService()
 
 print(" ")
+print("Accediendo a cuenta de Google... ")
 print(" ")
 
-for formId in formIds:
-    form = form_service.forms().get(formId=formId).execute()
-    formName = form['info']['documentTitle']
-    print("Leido formulario con nombre: " + formName)
-    forms.append(form)
+googleApiService.login("credentials.json","token.json", SCOPES)
+
+print(" ")
+print("Obteniendo formularios")
+print(" ")
+
+formDataRetriever = FormDataRetriever(googleApiService.getDriveService(), googleApiService.getFormService())
+forms = formDataRetriever.retrieveForms(settings.getProperty("formFolderId"), True)
 
 print("")
 print("Procesando Formularios...")
@@ -227,7 +155,7 @@ formsMissingPerChurch = {}
 formsFilledPerChurch = {}
 responsesPerChurch = {}
 
-writeFilePerForm = getBooleanConfig("writeFilePerForm", "Escribir archivo por formulario?")
+writeFilePerForm = settings.getProperty("writeFilePerForm")
 
 for form in forms:
     print(" ")
@@ -244,8 +172,7 @@ for form in forms:
     print("")
     # print("ID for church question: "+ churchQuestionId)
     print("Procesando respuestas...")
-    responseResponse = form_service.forms().responses().list(formId=form.get("formId")).execute()
-    responseList = responseResponse.get("responses")
+    responseList = formDataRetriever.retrieveFormResponses(form.get("formId"))
     #print(json.dumps(responseList, indent=4))
     if not responseList:
         print(" --- ERROR: No hay respuestas para este formulario. ---")
@@ -286,7 +213,7 @@ for form in forms:
                 formsMissingPerChurch[church].append(form)
         globalEmailData["attachments"].append(fileName)
 
-writeFilloutReport = getBooleanConfig("writeFilloutReport", "Imprimir reporte de llenado por iglesia?")
+writeFilloutReport = settings.getProperty("writeFilloutReport")
 
 if writeFilloutReport:
     print("")
@@ -306,7 +233,7 @@ if writeFilloutReport:
         print(report)
         emailPerChurch[church]["fillOutReport"] = report
 
-writeCummulativeReportPerChurch = getBooleanConfig("writeCummulativeReportPerChurch", "Imprimir y escribir acumulados por iglesia?")
+writeCummulativeReportPerChurch = settings.getProperty("writeCummulativeReportPerChurch")
 
 if writeCummulativeReportPerChurch:
     print("")
@@ -383,14 +310,14 @@ if writeCummulativeReportPerChurch:
             emailPerChurch[church]["cummulativeReport"] = report
             writer.writerow(cummulativeDataRow.getDataList())
 
-writeIndividualChurchForm = getBooleanConfig("writeIndividualChurchForm", "Escribir reporte por formulario, por iglesia?")
+writeIndividualChurchForm = settings.getProperty("writeIndividualChurchForm")
 
 def sendIndividualChurchEmail(email, churchName, emailData):
-    emailSender = EmailSender(gmail_service)
+    emailSender = EmailSender(googleApiService.getGmailService())
     emailSender.sendIndividualChurchEmail(email, churchName, emailData, fecha)
 
 def sendGlobalEmail(email, emailData):
-    emailSender = EmailSender(gmail_service)
+    emailSender = EmailSender(googleApiService.getGmailService())
     emailSender.sendGlobalReportEmail(email, emailData, fecha)
 
 
@@ -414,7 +341,7 @@ if writeIndividualChurchForm:
     print("")
     print(" -- Enviando correos a iglesias")
     print("------")
-    emails = configData["churchEmails"]
+    emails = settings.getProperty("churchEmails")
     for church in churchNames:
         try:
             churchEmail = emails[church]
@@ -428,7 +355,7 @@ if writeIndividualChurchForm:
     print("")
     print(" -- Enviando correo a oficina")
     print("------")
-    email = configData.get("globalReportEmail")
+    email = settings.getProperty("globalReportEmail")
 
     globalEmailData["attachments"].append(globalFileName)
     sendGlobalEmail(email, globalEmailData)
