@@ -24,8 +24,8 @@ class ChurchResponse:
         try:
             sanitizedInput = int(input.replace(".", ""))
         except ValueError as ve:
-            print(" ==== ERROR: No se pudo convertir a un numero: ")
-            print(ve)
+            logger.info(" ==== ERROR: No se pudo convertir a un numero: ")
+            logger.info(ve)
         return sanitizedInput
 
     def getAnswerIfExists(self, questionId, questionIds, answers):
@@ -103,14 +103,14 @@ class ChurchResponse:
                 try:
                     self.totalAssistants = self.totalAssistants + int(assistantsAnswerValue)
                 except ValueError:
-                    print("Error converting value to int.")
+                    logger.info("Error converting value to int.")
 
                 commulgantsAnswer = answers[questionIds[COMMULGANTS_PREFIX+str(index)]]
                 commulgantsAnswerValue = self.getAnswerValue(commulgantsAnswer)
                 try:
                     self.totalCommulgants = self.totalCommulgants + int(commulgantsAnswerValue)
                 except ValueError:
-                    print("Error converting value to int.")
+                    logger.info("Error converting value to int.")
 
                 index = index + 1
             else:

@@ -2,6 +2,7 @@ import base64
 from email.mime.text import MIMEText
 from email.message import EmailMessage
 from requests import HTTPError
+from loguru import logger
 
 class EmailSender:
         
@@ -9,7 +10,7 @@ class EmailSender:
         self.gmailService = gmailService
 
     def sendGlobalReportEmail(self, email, emailData, date):
-        print("Enviando correo global a oficinas al correo " + email)
+        logger.info("Enviando correo global a oficinas al correo " + email)
         emailSubject = "[Iglesia Episcopal] Estadísticas congregacionales con corte al " + date
         emailIntro = "Bendiciones. \n\nA continuación se provee un reporte general de las estadísticas reportadas para todas las congregaciones durante el periodo que comprende a la actual Convención Diocesana, con corte al " + date + ".\n"
         emailIntro = emailIntro + "Un reporte general acumulado se puede encontrar en el archivo adjunto con nombre 'reporte_total.csv'.\n\n"
@@ -30,11 +31,11 @@ class EmailSender:
         try:
             message = (self.gmailService.users().messages().send(userId="me", body=create_message).execute())
         except HTTPError as error:
-            print("An error occurred: " + error)
+            logger.info("An error occurred: " + error)
             message = None
 
     def sendIndividualChurchEmail(self, email, churchName, emailData, date):
-        print("Enviando correo a iglesia " + churchName)
+        logger.info("Enviando correo a iglesia " + churchName)
         filloutReport = emailData.get("fillOutReport")
         cummulativeReport = emailData.get("cummulativeReport")
         if (filloutReport and cummulativeReport):
@@ -57,11 +58,11 @@ class EmailSender:
             try:
                 message = (self.gmailService.users().messages().send(userId="me", body=create_message).execute())
             except HTTPError as error:
-                print("An error occurred: " + error)
+                logger.info("An error occurred: " + error)
                 message = None
         else:
-            print("Error: no se encontraron datos necesarios para correo.")
-            print("filloutreport:" + filloutReport)
-            print("cummulativereport:" + cummulativeReport)
+            logger.info("Error: no se encontraron datos necesarios para correo.")
+            logger.info("filloutreport:" + filloutReport)
+            logger.info("cummulativereport:" + cummulativeReport)
 
 

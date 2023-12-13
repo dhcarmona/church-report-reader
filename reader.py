@@ -1,6 +1,6 @@
 from __future__ import print_function
 from urllib import response
-
+from loguru import logger
 from constants import *
 import csv
 import os
@@ -25,63 +25,63 @@ globalEmailData["attachments"] = []
 fecha = date.today().strftime('%d-%m-%Y')
 
 
-print("Limpiando archivos viejos...")
+logger.info("Limpiando archivos viejos...")
 churchFileDirectory = "reportesPorIglesia"
 formFileDirectory = "reportesPorFormulario"
 filesInChurchDirectory = os.listdir(churchFileDirectory)
 filesInFormDirectory = os.listdir(formFileDirectory)
 for file in filesInChurchDirectory:
     path_to_file = os.path.join(churchFileDirectory, file)
-    print("Borrando archivo " + path_to_file)
+    logger.info("Borrando archivo " + path_to_file)
     os.remove(path_to_file)
 
 for file in filesInFormDirectory:
     path_to_file = os.path.join(formFileDirectory, file)
-    print("Borrando archivo " + path_to_file)
+    logger.info("Borrando archivo " + path_to_file)
     os.remove(path_to_file)
 
 path_to_global_file = os.path.join("", globalFileName)
-print("Borrando archivo " + path_to_global_file)
+logger.info("Borrando archivo " + path_to_global_file)
 try:
     os.remove(path_to_global_file)
 except FileNotFoundError as fnfe:
-    print("Global file doesn't exist.")
+    logger.info("Global file doesn't exist.")
 
-print("")
-print("Leyendo configuracion...")
+logger.info("")
+logger.info("Leyendo configuracion...")
 settings = SettingsRetriever("/Users/dhcarmona/config-prueba.json")
-print("Leida configuracion.")
-print(" ")
-print(" ")
-print(" ---- Lector de Formularios: Iglesia Episcopal Costarricense ----")
-print(" ")
-print(" ")
+logger.info("Leida configuracion.")
+logger.info(" ")
+logger.info(" ")
+logger.info(" ---- Lector de Formularios: Iglesia Episcopal Costarricense ----")
+logger.info(" ")
+logger.info(" ")
 
 googleApiService = GoogleAPIService()
 
-print(" ")
-print("Accediendo a cuenta de Google... ")
-print(" ")
+logger.info(" ")
+logger.info("Accediendo a cuenta de Google... ")
+logger.info(" ")
 
 googleApiService.login("credentials.json","token.json", SCOPES)
 
-print(" ")
-print("Obteniendo formularios")
-print(" ")
+logger.info(" ")
+logger.info("Obteniendo formularios")
+logger.info(" ")
 
 formDataRetriever = FormDataRetriever(googleApiService.getDriveService(), googleApiService.getFormService())
 forms = formDataRetriever.retrieveForms(settings.getProperty("formFolderId"), True)
 
-print("")
-print("Procesando Formularios...")
-print("")
+logger.info("")
+logger.info("Procesando Formularios...")
+logger.info("")
 
 churchNamesSet = False
 
 if forms and not churchNamesSet:
-    print("")
-    print("Obteniendo nombres de congregaciones...")
-    print("")
+    logger.info("")
+    logger.info("Obteniendo nombres de congregaciones...")
+    logger.info("")
     form = forms[0]
     for item in form.get("items"):
         if CHURCH_QUESTION_ID in item.get("title"):
@@ -90,7 +90,7 @@ if forms and not churchNamesSet:
             churchNamesSet = True
 
 for name in churchNames:
-    print(name)
+    logger.info(name)
     emailPerChurch[name] = {}
 
 def getQuestionIds(form):
@@ -99,8 +99,8 @@ def getQuestionIds(form):
     assistantIndex = 0
     commulgantIndex = 0
     for item in form.get("items"):
-        #print(" DEBUG Processing Item ")
-        #print(json.dumps(item, indent=4))
+        #logger.info(" DEBUG Processing Item ")
+        #logger.info(json.dumps(item, indent=4))
         questionTitle = item.get("title") 
         if (CHURCH_QUESTION_ID) in questionTitle:
             questionIds[CHURCH_QUESTION_TITLE] = item.get("questionItem").get("question").get("questionId")
@@ -158,26 +158,26 @@ responsesPerChurch = {}
 writeFilePerForm = settings.getProperty("writeFilePerForm")
 
 for form in forms:
-    print(" ")
+    logger.info(" ")
     formName = form['info']['documentTitle']
     formName.replace("//", "-")
     formName.replace("\/", "-")
     fileName = path.relpath('reportesPorFormulario/reporte_'+formName+'.csv')
     fileName = fileName.replace("(", "")
     fileName = fileName.replace(")", "")
-    print(" ------- FORMULARIO: " + formName)
+    logger.info(" ------- FORMULARIO: " + formName)
     churchQuestionId = ""
     questionIds = getQuestionIds(form)
     churchQuestionId = questionIds[CHURCH_QUESTION_TITLE]
-    print("")
-    # print("ID for church question: "+ churchQuestionId)
-    print("Procesando respuestas...")
+    logger.info("")
+    # logger.info("ID for church question: "+ churchQuestionId)
+    logger.info("Procesando respuestas...")
     responseList = formDataRetriever.retrieveFormResponses(form.get("formId"))
-    #print(json.dumps(responseList, indent=4))
+    #logger.info(json.dumps(responseList, indent=4))
     if not responseList:
-        print(" --- ERROR: No hay respuestas para este formulario. ---")
+        logger.info(" --- ERROR: No hay respuestas para este formulario. ---")
         continue
-    print("Encontradas "+ str(len(responseList)) +" respuestas para este formulario.")
+    logger.info("Encontradas "+ str(len(responseList)) +" respuestas para este formulario.")
     churchesWhoAnsweredThisForm = []
     with open(fileName, 'w', encoding='UTF8', newline='') as f:
         writer = csv.writer(f)
@@ -190,10 +190,10 @@ for form in forms:
                 churchQuestionAnswer = responseAnswers.get(churchQuestionId)
                 churchQuestionTextAnswers = churchQuestionAnswer.get("textAnswers")
                 churchAnswer = churchQuestionTextAnswers.get("answers")[0].get("value")
-                print("Encontrada respuesta para esta iglesia: " + churchAnswer)
+                logger.info("Encontrada respuesta para esta iglesia: " + churchAnswer)
                 if churchAnswer in churchesWhoAnsweredThisForm:
-                    print("Ya existe una respuesta de esta iglesia para este formulario.")
-                    print("Ignorando esta respuesta.")
+                    logger.info("Ya existe una respuesta de esta iglesia para este formulario.")
+                    logger.info("Ignorando esta respuesta.")
                     continue
                 if writeFilePerForm:
                     writer.writerow(churchResponse.individualFormRow.getDataList())
@@ -203,8 +203,8 @@ for form in forms:
                 responsesPerChurch[churchAnswer].append(churchResponse)
 
             except Exception as e:
-                print("ERROR GRAVE: No se pudo obtener los datos de esta respuesta.")
-                print(e)
+                logger.info("ERROR GRAVE: No se pudo obtener los datos de esta respuesta.")
+                logger.info(e)
         for church in churchNames:
             if not church in churchesWhoAnsweredThisForm:
                 print ("--- IGLESIA " + church + " NO RESPONDIO ESTE FORMULARIO -- ")
@@ -216,9 +216,9 @@ for form in forms:
 writeFilloutReport = settings.getProperty("writeFilloutReport")
 
 if writeFilloutReport:
-    print("")
-    print(" -- REPORTE DE LLENADO POR IGLESIA - FORMULARIOS FALTANTES ")
-    print("------")
+    logger.info("")
+    logger.info(" -- REPORTE DE LLENADO POR IGLESIA - FORMULARIOS FALTANTES ")
+    logger.info("------")
 
     for church in churchNames:
         report = ""
@@ -230,24 +230,24 @@ if writeFilloutReport:
                 report = report + " -- Enlace para llenarlo: " + missingForm.get("responderUri") + "\n"
         except KeyError:
             report = report + "Esta congregación no tiene ningun formulario faltante.\n"
-        print(report)
+        logger.info(report)
         emailPerChurch[church]["fillOutReport"] = report
 
 writeCummulativeReportPerChurch = settings.getProperty("writeCummulativeReportPerChurch")
 
 if writeCummulativeReportPerChurch:
-    print("")
-    print(" -- REPORTE DE ACUMULADOS POR IGLESIA")
-    print("------")
+    logger.info("")
+    logger.info(" -- REPORTE DE ACUMULADOS POR IGLESIA")
+    logger.info("------")
     globalFileName = path.relpath('reporte_total.csv')
     globalFileName = globalFileName.replace("(", "")
     globalFileName = globalFileName.replace(")", "")
-    print(" - Escribiendo a archivo: " + globalFileName)
+    logger.info(" - Escribiendo a archivo: " + globalFileName)
     with open(globalFileName, 'w', encoding='UTF8', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(CummulativeDataRow.getHeaderList())
         for church in responsesPerChurch.keys():
-            print("------")
+            logger.info("------")
             totalReports = 0
             totalAssistance = 0
             totalCommulgants = 0
@@ -322,12 +322,12 @@ def sendGlobalEmail(email, emailData):
 
 
 if writeIndividualChurchForm:
-    print("")
-    print(" -- REPORTE INDIVIDUAL POR IGLESIA")
-    print("------")
+    logger.info("")
+    logger.info(" -- REPORTE INDIVIDUAL POR IGLESIA")
+    logger.info("------")
     for church in responsesPerChurch.keys():
         fileName = path.relpath('reportesPorIglesia/reporte_formularios_'+church+'.csv')
-        print(" - Escribiendo a archivo: " + fileName)
+        logger.info(" - Escribiendo a archivo: " + fileName)
         with open(fileName, 'w', encoding='UTF8', newline='') as f:
             writer = csv.writer(f)
             writer.writerow(IndividualDataRow.getHeaderList())
@@ -338,23 +338,23 @@ if writeIndividualChurchForm:
         emailPerChurch[church]["attachments"].append(fileName)      
         globalEmailData["attachments"].append(fileName)
 
-    print("")
-    print(" -- Enviando correos a iglesias")
-    print("------")
+    logger.info("")
+    logger.info(" -- Enviando correos a iglesias")
+    logger.info("------")
     emails = settings.getProperty("churchEmails")
     for church in churchNames:
         try:
             churchEmail = emails[church]
             if churchEmail:
-                print("Correo para iglesia: " + church + " es " + churchEmail)
+                logger.info("Correo para iglesia: " + church + " es " + churchEmail)
                 sendIndividualChurchEmail(churchEmail, church, emailPerChurch[church])
         except Exception as e:
-            print("Error enviando correo")
-            print(e)
+            logger.info("Error enviando correo")
+            logger.info(e)
 
-    print("")
-    print(" -- Enviando correo a oficina")
-    print("------")
+    logger.info("")
+    logger.info(" -- Enviando correo a oficina")
+    logger.info("------")
     email = settings.getProperty("globalReportEmail")
 
     globalEmailData["attachments"].append(globalFileName)

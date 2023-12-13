@@ -1,5 +1,6 @@
 from httplib2 import Http
 from googleapiclient.errors import HttpError
+from loguru import logger
 
 class FormDataRetriever:
 
@@ -13,7 +14,7 @@ class FormDataRetriever:
             files = []
             formIds = []
             page_token = None
-            print("Procesando folder "+ formFolderId)
+            logger.info("Procesando folder "+ formFolderId)
             while True:
                 filesResponse = self.drive_service.files().list(q="'"+ formFolderId + "' in parents AND mimeType='application/vnd.google-apps.form'",
                                                         spaces='drive',
@@ -21,7 +22,7 @@ class FormDataRetriever:
                                                                 'files(id, name)',
                                                         pageToken=page_token).execute()
                 for file in filesResponse.get('files', []):
-                    print(F'Encontrado archivo: {file.get("name")}, {file.get("id")}')
+                    logger.info(F'Encontrado archivo: {file.get("name")}, {file.get("id")}')
                     files.extend(filesResponse.get('files', []))
                     if processAllFiles:
                         formIds.append(file.get("id"))
@@ -33,10 +34,10 @@ class FormDataRetriever:
             for formId in formIds:
                 form = self.form_service.forms().get(formId=formId).execute()
                 formName = form['info']['documentTitle']
-                print("Leido formulario con nombre: " + formName)
+                logger.info("Leido formulario con nombre: " + formName)
                 forms.append(form)
         except HttpError as error:
-            print(F'Error: {error}')
+            logger.info(F'Error: {error}')
         return forms
     
     def retrieveFormResponses(self, formId):
