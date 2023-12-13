@@ -14,7 +14,6 @@ from os import path
 
 # Globals. TODO: refactor most of these
 
-churchNames = []
 config = None
 emailPerChurch = {}
 globalFileName = path.relpath('reporte_total.csv')
@@ -32,12 +31,12 @@ filesInChurchDirectory = os.listdir(churchFileDirectory)
 filesInFormDirectory = os.listdir(formFileDirectory)
 for file in filesInChurchDirectory:
     path_to_file = os.path.join(churchFileDirectory, file)
-    logger.info("Borrando archivo " + path_to_file)
+    logger.debug("Borrando archivo " + path_to_file)
     os.remove(path_to_file)
 
 for file in filesInFormDirectory:
     path_to_file = os.path.join(formFileDirectory, file)
-    logger.info("Borrando archivo " + path_to_file)
+    logger.debug("Borrando archivo " + path_to_file)
     os.remove(path_to_file)
 
 path_to_global_file = os.path.join("", globalFileName)
@@ -45,7 +44,7 @@ logger.info("Borrando archivo " + path_to_global_file)
 try:
     os.remove(path_to_global_file)
 except FileNotFoundError as fnfe:
-    logger.info("Global file doesn't exist.")
+    logger.info("Archivo de reporte global no existe.")
 
 logger.info("")
 logger.info("Leyendo configuracion...")
@@ -76,21 +75,9 @@ logger.info("")
 logger.info("Procesando Formularios...")
 logger.info("")
 
-churchNamesSet = False
-
-if forms and not churchNamesSet:
-    logger.info("")
-    logger.info("Obteniendo nombres de congregaciones...")
-    logger.info("")
-    form = forms[0]
-    for item in form.get("items"):
-        if CHURCH_QUESTION_ID in item.get("title"):
-            for option in item.get("questionItem").get("question").get("choiceQuestion").get("options"):
-                churchNames.append(option.get("value"))
-            churchNamesSet = True
+churchNames = formDataRetriever.retrieveChurchNames()
 
 for name in churchNames:
-    logger.info(name)
     emailPerChurch[name] = {}
 
 def getQuestionIds(form):

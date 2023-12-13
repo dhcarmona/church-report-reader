@@ -1,6 +1,7 @@
 from httplib2 import Http
 from googleapiclient.errors import HttpError
 from loguru import logger
+from constants import *
 
 class FormDataRetriever:
 
@@ -9,7 +10,7 @@ class FormDataRetriever:
         self.form_service = formAPIService
 
     def retrieveForms(self, formFolderId, processAllFiles):
-        forms = []
+        self.forms = []
         try:
             files = []
             formIds = []
@@ -35,11 +36,24 @@ class FormDataRetriever:
                 form = self.form_service.forms().get(formId=formId).execute()
                 formName = form['info']['documentTitle']
                 logger.info("Leido formulario con nombre: " + formName)
-                forms.append(form)
+                self.forms.append(form)
         except HttpError as error:
             logger.info(F'Error: {error}')
-        return forms
+        return self.forms
     
     def retrieveFormResponses(self, formId):
        responseResponse = self.form_service.forms().responses().list(formId=formId).execute()
        return responseResponse.get("responses")
+    
+    def retrieveChurchNames(self):
+        churchNames = []
+        if self.forms:
+            logger.info("")
+            logger.info("Obteniendo nombres de congregaciones...")
+            logger.info("")
+            form = self.forms[0]
+            for item in form.get("items"):
+                if CHURCH_QUESTION_ID in item.get("title"):
+                    for option in item.get("questionItem").get("question").get("choiceQuestion").get("options"):
+                        churchNames.append(option.get("value"))
+        return churchNames
