@@ -1,6 +1,7 @@
 from __future__ import print_function
 from urllib import response
 from loguru import logger
+import argparse
 from constants import *
 import csv
 import os
@@ -23,6 +24,9 @@ globalEmailData = {}
 globalEmailData["attachments"] = []
 fecha = date.today().strftime('%d-%m-%Y')
 
+parser = argparse.ArgumentParser()
+parser.add_argument('--configFile', type=str, required=True)
+args = parser.parse_args()
 
 logger.info("Limpiando archivos viejos...")
 churchFileDirectory = "reportesPorIglesia"
@@ -48,7 +52,7 @@ except FileNotFoundError as fnfe:
 
 logger.info("")
 logger.info("Leyendo configuracion...")
-settings = SettingsRetriever("/Users/dhcarmona/config-prueba.json")
+settings = SettingsRetriever(args.configFile)
 logger.info("Leida configuracion.")
 logger.info(" ")
 logger.info(" ")
