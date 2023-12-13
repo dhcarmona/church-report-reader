@@ -17,3 +17,6 @@ class SettingsRetriever:
         
     def getProperty(self, key):
         return self.configData.get(key)
+    
+    def getEmailForChurch(self, churchName):
+        return self.configData.get("churchEmails").get(churchName)

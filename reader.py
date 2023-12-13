@@ -20,8 +20,7 @@ emailPerChurch = {}
 globalFileName = path.relpath('reporte_total.csv')
 globalFileName = globalFileName.replace("(", "")
 globalFileName = globalFileName.replace(")", "")
-globalEmailData = {}
-globalEmailData["attachments"] = []
+
 fecha = date.today().strftime('%d-%m-%Y')
 
 parser = argparse.ArgumentParser()
@@ -84,125 +83,12 @@ churchNames = formDataRetriever.retrieveChurchNames()
 for name in churchNames:
     emailPerChurch[name] = {}
 
-def getQuestionIds(form):
-    questionIds = {}
-    celebrantIndex = 0
-    assistantIndex = 0
-    commulgantIndex = 0
-    for item in form.get("items"):
-        #logger.info(" DEBUG Processing Item ")
-        #logger.info(json.dumps(item, indent=4))
-        questionTitle = item.get("title") 
-        if (CHURCH_QUESTION_ID) in questionTitle:
-            questionIds[CHURCH_QUESTION_TITLE] = item.get("questionItem").get("question").get("questionId")
-        elif ("que llena este") in questionTitle:
-            questionIds[REPORT_FILLER] = item.get("questionItem").get("question").get("questionId")
-        elif ("a Cargo") in questionTitle:
-            questionIds[PERSON_IN_CHARGE] = item.get("questionItem").get("question").get("questionId")
-        elif ("celebrante") in questionTitle:
-            questionIds[CELEBRANT_PREFIX+str(celebrantIndex)] = item.get("questionItem").get("question").get("questionId")
-            celebrantIndex = celebrantIndex + 1
-        elif ("asistieron") in questionTitle:
-            questionIds[ASSISTANTS_PREFIX+str(assistantIndex)] = item.get("questionItem").get("question").get("questionId")
-            assistantIndex = assistantIndex + 1
-        elif ("comulgaron") in questionTitle:
-            questionIds[COMMULGANTS_PREFIX+str(commulgantIndex)] = item.get("questionItem").get("question").get("questionId")
-            commulgantIndex = commulgantIndex + 1
-        elif ("realizaron entre semana") in questionTitle:
-            questionIds[WEEKDAY_SERVICES] = item.get("questionItem").get("question").get("questionId")
-        elif ("realizaron el fin de semana") in questionTitle:
-            questionIds[WEEKEND_SERVICES] = item.get("questionItem").get("question").get("questionId")
-        elif ("Ofrenda Simple - Colones") in questionTitle:
-            questionIds[SIMPLE_COLONES] = item.get("questionItem").get("question").get("questionId")
-        elif ("Ofrenda Simple - Dólares") in questionTitle:
-            questionIds[SIMPLE_DOLLARS] = item.get("questionItem").get("question").get("questionId")
-        elif ("Ofrenda Designada - Colones") in questionTitle:
-            questionIds[DESIGNATED_OFFERING_COLONES] = item.get("questionItem").get("question").get("questionId")
-        elif ("Ofrenda Designada - Dólares") in questionTitle:
-            questionIds[DESIGNATED_OFFERING_DOLLARS] = item.get("questionItem").get("question").get("questionId")
-        elif ("Promesas - Colones") in questionTitle:
-            questionIds[PROMISES_COLONES] = item.get("questionItem").get("question").get("questionId")
-        elif ("Promesas - Dólares") in questionTitle:
-            questionIds[PROMISES_DOLLARS] = item.get("questionItem").get("question").get("questionId")
-        elif ("Bautismos") in questionTitle:
-            questionIds[BAPTISMS] = item.get("questionItem").get("question").get("questionId")
-        elif ("Confirmaciones") in questionTitle:
-            questionIds[CONFIRMATIONS] = item.get("questionItem").get("question").get("questionId")
-        elif ("Recepciones") in questionTitle:
-            questionIds[RECEPTIONS] = item.get("questionItem").get("question").get("questionId")
-        elif ("Transferencias") in questionTitle:
-            questionIds[TRANSFERS] = item.get("questionItem").get("question").get("questionId")
-        elif ("Restauraciones") in questionTitle:
-            questionIds[RESTORES] = item.get("questionItem").get("question").get("questionId")
-        elif ("Muertes") in questionTitle:
-            questionIds[DEATHS] = item.get("questionItem").get("question").get("questionId")
-        elif ("Traslados") in questionTitle:
-            questionIds[MOVES] = item.get("questionItem").get("question").get("questionId")
-        elif ("Otras causas") in questionTitle:
-            questionIds[OTHER_LOSSES] = item.get("questionItem").get("question").get("questionId")
-    return questionIds
+formDataRetriever.parseAllResponsesAndWriteCSVFiles()
 
-formsMissingPerChurch = {}
-formsFilledPerChurch = {}
-responsesPerChurch = {}
+formsMissingPerChurch = formDataRetriever.getFormsMissingPerChurch()
+responsesPerChurch = formDataRetriever.getAllResponsesPerChurch()
 
 writeFilePerForm = settings.getProperty("writeFilePerForm")
-
-for form in forms:
-    logger.info(" ")
-    formName = form['info']['documentTitle']
-    formName.replace("//", "-")
-    formName.replace("\/", "-")
-    fileName = path.relpath('reportesPorFormulario/reporte_'+formName+'.csv')
-    fileName = fileName.replace("(", "")
-    fileName = fileName.replace(")", "")
-    logger.info(" ------- FORMULARIO: " + formName)
-    churchQuestionId = ""
-    questionIds = getQuestionIds(form)
-    churchQuestionId = questionIds[CHURCH_QUESTION_TITLE]
-    logger.info("")
-    # logger.info("ID for church question: "+ churchQuestionId)
-    logger.info("Procesando respuestas...")
-    responseList = formDataRetriever.retrieveFormResponses(form.get("formId"))
-    #logger.info(json.dumps(responseList, indent=4))
-    if not responseList:
-        logger.info(" --- ERROR: No hay respuestas para este formulario. ---")
-        continue
-    logger.info("Encontradas "+ str(len(responseList)) +" respuestas para este formulario.")
-    churchesWhoAnsweredThisForm = []
-    with open(fileName, 'w', encoding='UTF8', newline='') as f:
-        writer = csv.writer(f)
-        if writeFilePerForm:
-            writer.writerow(IndividualFormRow.getHeaderList())
-        for response in responseList:
-            churchResponse = ChurchResponse(response, questionIds, formName)
-            try:
-                responseAnswers = response.get("answers")
-                churchQuestionAnswer = responseAnswers.get(churchQuestionId)
-                churchQuestionTextAnswers = churchQuestionAnswer.get("textAnswers")
-                churchAnswer = churchQuestionTextAnswers.get("answers")[0].get("value")
-                logger.info("Encontrada respuesta para esta iglesia: " + churchAnswer)
-                if churchAnswer in churchesWhoAnsweredThisForm:
-                    logger.info("Ya existe una respuesta de esta iglesia para este formulario.")
-                    logger.info("Ignorando esta respuesta.")
-                    continue
-                if writeFilePerForm:
-                    writer.writerow(churchResponse.individualFormRow.getDataList())
-                churchesWhoAnsweredThisForm.append(churchAnswer)
-                if not churchAnswer in responsesPerChurch:
-                    responsesPerChurch[churchAnswer] = []
-                responsesPerChurch[churchAnswer].append(churchResponse)
-
-            except Exception as e:
-                logger.info("ERROR GRAVE: No se pudo obtener los datos de esta respuesta.")
-                logger.info(e)
-        for church in churchNames:
-            if not church in churchesWhoAnsweredThisForm:
-                print ("--- IGLESIA " + church + " NO RESPONDIO ESTE FORMULARIO -- ")
-                if not church in formsMissingPerChurch:
-                    formsMissingPerChurch[church] = []
-                formsMissingPerChurch[church].append(form)
-        globalEmailData["attachments"].append(fileName)
 
 writeFilloutReport = settings.getProperty("writeFilloutReport")
 
@@ -312,6 +198,9 @@ def sendGlobalEmail(email, emailData):
     emailSender.sendGlobalReportEmail(email, emailData, fecha)
 
 
+globalEmailData = {}
+globalEmailData["attachments"] = []
+
 if writeIndividualChurchForm:
     logger.info("")
     logger.info(" -- REPORTE INDIVIDUAL POR IGLESIA")
@@ -332,10 +221,9 @@ if writeIndividualChurchForm:
     logger.info("")
     logger.info(" -- Enviando correos a iglesias")
     logger.info("------")
-    emails = settings.getProperty("churchEmails")
     for church in churchNames:
         try:
-            churchEmail = emails[church]
+            churchEmail = settings.getEmailForChurch(church)
             if churchEmail:
                 logger.info("Correo para iglesia: " + church + " es " + churchEmail)
                 sendIndividualChurchEmail(churchEmail, church, emailPerChurch[church])
@@ -348,5 +236,5 @@ if writeIndividualChurchForm:
     logger.info("------")
     email = settings.getProperty("globalReportEmail")
 
-    globalEmailData["attachments"].append(globalFileName)
+    globalEmailData["attachments"].append(formDataRetriever.getReportFiles())
     sendGlobalEmail(email, globalEmailData)
