@@ -135,7 +135,6 @@ if writeCummulativeReportPerChurch:
         writer = csv.writer(f)
         writer.writerow(GlobalReportDataRow.getHeaderList())
         for church in responsesPerChurch.keys():
-            logger.info("------")
             totalReports = 0
             totalAssistance = 0
             totalCommulgants = 0
