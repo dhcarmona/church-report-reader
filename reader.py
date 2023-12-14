@@ -12,6 +12,7 @@ from FormDataRetriever import FormDataRetriever
 from SettingsRetriever import SettingsRetriever
 from datetime import date
 from os import path
+import sys
 
 # Globals. TODO: refactor most of these
 
@@ -26,6 +27,20 @@ fecha = date.today().strftime('%d-%m-%Y')
 parser = argparse.ArgumentParser()
 parser.add_argument('--configFile', type=str, required=True)
 args = parser.parse_args()
+
+logger.remove()
+logger.add(sys.stdout, level="INFO") 
+
+logger.info("")
+logger.info("Leyendo configuracion...")
+settings = SettingsRetriever(args.configFile)
+logger.info("Leida configuracion.")
+
+logLevel = settings.getProperty("logLevel")
+if (logLevel):
+    logger.remove()
+    logger.add(sys.stdout, level=logLevel) 
+logger.info("")
 
 logger.info("Limpiando archivos viejos...")
 churchFileDirectory = "reportesPorIglesia"
@@ -49,10 +64,6 @@ try:
 except FileNotFoundError as fnfe:
     logger.info("Archivo de reporte global no existe.")
 
-logger.info("")
-logger.info("Leyendo configuracion...")
-settings = SettingsRetriever(args.configFile)
-logger.info("Leida configuracion.")
 logger.info(" ")
 logger.info(" ")
 logger.info(" ---- Lector de Formularios: Iglesia Episcopal Costarricense ----")
@@ -93,9 +104,9 @@ writeFilePerForm = settings.getProperty("writeFilePerForm")
 writeFilloutReport = settings.getProperty("writeFilloutReport")
 
 if writeFilloutReport:
-    logger.info("")
-    logger.info(" -- REPORTE DE LLENADO POR IGLESIA - FORMULARIOS FALTANTES ")
-    logger.info("------")
+    logger.debug("")
+    logger.debug(" -- REPORTE DE LLENADO POR IGLESIA - FORMULARIOS FALTANTES ")
+    logger.debug("------")
 
     for church in churchNames:
         report = ""
@@ -107,7 +118,7 @@ if writeFilloutReport:
                 report = report + " -- Enlace para llenarlo: " + missingForm.get("responderUri") + "\n"
         except KeyError:
             report = report + "Esta congregación no tiene ningun formulario faltante.\n"
-        logger.info(report)
+        logger.debug(report)
         emailPerChurch[church]["fillOutReport"] = report
 
 writeCummulativeReportPerChurch = settings.getProperty("writeCummulativeReportPerChurch")
@@ -189,15 +200,6 @@ if writeCummulativeReportPerChurch:
 
 writeIndividualChurchForm = settings.getProperty("writeIndividualChurchForm")
 
-def sendIndividualChurchEmail(email, churchName, emailData):
-    emailSender = EmailSender(googleApiService.getGmailService())
-    emailSender.sendIndividualChurchEmail(email, churchName, emailData, fecha)
-
-def sendGlobalEmail(email, emailData):
-    emailSender = EmailSender(googleApiService.getGmailService())
-    emailSender.sendGlobalReportEmail(email, emailData, fecha)
-
-
 globalEmailData = {}
 globalEmailData["attachments"] = []
 
@@ -218,23 +220,25 @@ if writeIndividualChurchForm:
         emailPerChurch[church]["attachments"].append(fileName)      
         globalEmailData["attachments"].append(fileName)
 
-    logger.info("")
-    logger.info(" -- Enviando correos a iglesias")
-    logger.info("------")
-    for church in churchNames:
-        try:
-            churchEmail = settings.getEmailForChurch(church)
-            if churchEmail:
-                logger.info("Correo para iglesia: " + church + " es " + churchEmail)
-                sendIndividualChurchEmail(churchEmail, church, emailPerChurch[church])
-        except Exception as e:
-            logger.info("Error enviando correo")
-            logger.info(e)
+logger.info("")
+logger.info(" -- Enviando correos a iglesias")
+logger.info("------")
+emailSender = EmailSender(googleApiService.getGmailService())
 
-    logger.info("")
-    logger.info(" -- Enviando correo a oficina")
-    logger.info("------")
-    email = settings.getProperty("globalReportEmail")
+for church in churchNames:
+    try:
+        churchEmail = settings.getEmailForChurch(church)
+        if churchEmail:
+            logger.info("Correo para iglesia: " + church + " es " + churchEmail)
+            emailSender.sendIndividualChurchEmail(churchEmail, church, emailPerChurch[church], fecha)
+    except Exception as e:
+        logger.info("Error enviando correo")
+        logger.info(e)
 
-    globalEmailData["attachments"].append(formDataRetriever.getReportFiles())
-    sendGlobalEmail(email, globalEmailData)
+logger.info("")
+logger.info(" -- Enviando correo a oficina")
+logger.info("------")
+email = settings.getProperty("globalReportEmail")
+
+globalEmailData["attachments"] = formDataRetriever.getReportFiles()
+emailSender.sendGlobalReportEmail(email, globalEmailData, fecha)

@@ -9,6 +9,12 @@ class EmailSender:
     def __init__(self, gmailService):
         self.gmailService = gmailService
 
+    def attachFileToMessage(self, message, filePath):
+        logger.debug("Attaching file: " + filePath)
+        with open(filePath, 'rb') as content_file:
+            content = content_file.read()
+            message.add_attachment(content, maintype='application', subtype= (filePath.split('.')[1]), filename=filePath)
+
     def sendGlobalReportEmail(self, email, emailData, date):
         logger.info("Enviando correo global a oficinas al correo " + email)
         emailSubject = "[Iglesia Episcopal] Estadísticas congregacionales con corte al " + date
@@ -24,9 +30,7 @@ class EmailSender:
         message['subject'] = emailSubject
         if attachments:
             for attachment in attachments:
-                with open(attachment, 'rb') as content_file:
-                    content = content_file.read()
-                    message.add_attachment(content, maintype='application', subtype= (attachment.split('.')[1]), filename=attachment)
+                self.attachFileToMessage(message, attachment)
         create_message = {'raw': base64.urlsafe_b64encode(message.as_bytes()).decode()}
         try:
             message = (self.gmailService.users().messages().send(userId="me", body=create_message).execute())
@@ -51,9 +55,7 @@ class EmailSender:
             attachments = emailData.get("attachments")
             if attachments:
                 for attachment in attachments:
-                    with open(attachment, 'rb') as content_file:
-                        content = content_file.read()
-                        message.add_attachment(content, maintype='application', subtype= (attachment.split('.')[1]), filename=attachment)
+                    self.attachFileToMessage(message, attachment)
             create_message = {'raw': base64.urlsafe_b64encode(message.as_bytes()).decode()}
             try:
                 message = (self.gmailService.users().messages().send(userId="me", body=create_message).execute())

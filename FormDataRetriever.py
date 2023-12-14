@@ -13,9 +13,10 @@ class FormDataRetriever:
         self.drive_service = driveAPIService
         self.form_service = formAPIService
         self.forms = []
-        self.responsesPerChurch = []
-        self.formsMissingPerChurch = []
+        self.responsesPerChurch = {}
+        self.formsMissingPerChurch = {}
         self.reportFiles = []
+        self.churchNames = []
 
     def retrieveForms(self, formFolderId, processAllFiles):
         self.forms = []
@@ -52,19 +53,18 @@ class FormDataRetriever:
        return responseResponse.get("responses")
     
     def retrieveChurchNames(self):
-        churchNames = []
-        if self.forms:
-            logger.info("")
-            logger.info("Obteniendo nombres de congregaciones...")
-            logger.info("")
+        if self.forms and not self.churchNames:
+            logger.debug("")
+            logger.debug("Obteniendo nombres de congregaciones...")
+            logger.debug("")
             form = self.forms[0]
             for item in form.get("items"):
                 if CHURCH_QUESTION_ID in item.get("title"):
                     for option in item.get("questionItem").get("question").get("choiceQuestion").get("options"):
                         name = option.get("value")
-                        logger.info(name)
-                        churchNames.append(name)
-        return churchNames
+                        logger.debug(name)
+                        self.churchNames.append(name)
+        return self.churchNames
 
     def getQuestionIds(self, form):
         questionIds = {}
@@ -72,8 +72,7 @@ class FormDataRetriever:
         assistantIndex = 0
         commulgantIndex = 0
         for item in form.get("items"):
-            #logger.info(" DEBUG Processing Item ")
-            #logger.info(json.dumps(item, indent=4))
+            #logger.trace(json.dumps(item, indent=4))
             questionTitle = item.get("title") 
             if (CHURCH_QUESTION_ID) in questionTitle:
                 questionIds[CHURCH_QUESTION_TITLE] = item.get("questionItem").get("question").get("questionId")
@@ -143,9 +142,9 @@ class FormDataRetriever:
             responseList = self.retrieveFormResponses(form.get("formId"))
             logger.trace(json.dumps(responseList, indent=4))
             if not responseList:
-                logger.info(" --- ERROR: No hay respuestas para este formulario. ---")
+                logger.info(" --- ERROR: No hay respuestas para el formulario. "+ formName +" ---")
                 continue
-            logger.info("Encontradas "+ str(len(responseList)) +" respuestas para este formulario.")
+            logger.debug("Encontradas "+ str(len(responseList)) +" respuestas para este formulario.")
             churchesWhoAnsweredThisForm = []
             with CSVWriter(fileName, IndividualFormRow.getHeaderList()) as csvWriter:
                 for response in responseList:
@@ -155,10 +154,10 @@ class FormDataRetriever:
                         churchQuestionAnswer = responseAnswers.get(churchQuestionId)
                         churchQuestionTextAnswers = churchQuestionAnswer.get("textAnswers")
                         churchAnswer = churchQuestionTextAnswers.get("answers")[0].get("value")
-                        logger.info("Encontrada respuesta para esta iglesia: " + churchAnswer)
+                        logger.debug("Encontrada respuesta para esta iglesia: " + churchAnswer)
                         if churchAnswer in churchesWhoAnsweredThisForm:
-                            logger.info("Ya existe una respuesta de esta iglesia para este formulario.")
-                            logger.info("Ignorando esta respuesta.")
+                            logger.debug("Ya existe una respuesta de esta iglesia para este formulario.")
+                            logger.debug("Ignorando esta respuesta.")
                             continue
                         csvWriter.writeRow(churchResponse.individualFormRow.getDataList())
                         churchesWhoAnsweredThisForm.append(churchAnswer)
@@ -167,11 +166,11 @@ class FormDataRetriever:
                         self.responsesPerChurch[churchAnswer].append(churchResponse)
 
                     except Exception as e:
-                        logger.info("ERROR GRAVE: No se pudo obtener los datos de esta respuesta.")
-                        logger.info(e)
+                        logger.debug("ERROR GRAVE: No se pudo obtener los datos de esta respuesta.")
+                        logger.debug(e)
                 for church in self.retrieveChurchNames():
                     if not church in churchesWhoAnsweredThisForm:
-                        print ("--- IGLESIA " + church + " NO RESPONDIO ESTE FORMULARIO -- ")
+                        logger.debug("--- IGLESIA " + church + " NO RESPONDIO ESTE FORMULARIO -- ")
                         if not church in self.formsMissingPerChurch:
                             self.formsMissingPerChurch[church] = []
                         self.formsMissingPerChurch[church].append(form)
