@@ -3,7 +3,7 @@ from httplib2 import Http
 from googleapiclient.errors import HttpError
 from loguru import logger
 from constants import *
-from church import ChurchResponse, CummulativeDataRow, IndividualDataRow, IndividualFormRow
+from FormData import ChurchResponse, IndividualFormRow
 from CSVWriter import CSVWriter
 from os import path
 

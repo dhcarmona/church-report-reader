@@ -5,7 +5,7 @@ import argparse
 from constants import *
 import csv
 import os
-from church import ChurchResponse, CummulativeDataRow, IndividualDataRow, IndividualFormRow
+from FormData import ChurchResponse, GlobalReportDataRow, WeeklyPerChurchDataRow
 from EmailSender import EmailSender
 from GoogleAPIService import GoogleAPIService
 from FormDataRetriever import FormDataRetriever
@@ -133,7 +133,7 @@ if writeCummulativeReportPerChurch:
     logger.info(" - Escribiendo a archivo: " + globalFileName)
     with open(globalFileName, 'w', encoding='UTF8', newline='') as f:
         writer = csv.writer(f)
-        writer.writerow(CummulativeDataRow.getHeaderList())
+        writer.writerow(GlobalReportDataRow.getHeaderList())
         for church in responsesPerChurch.keys():
             logger.info("------")
             totalReports = 0
@@ -177,7 +177,7 @@ if writeCummulativeReportPerChurch:
                 totalWeekdayServices = totalWeekdayServices + response.amountOfWeekdayServices
                 totalWeekendServices = totalWeekendServices + response.amountOfWeekendServices
 
-            cummulativeDataRow = CummulativeDataRow(church, totalReports, totalAssistance, totalCommulgants, totalSimpleColones,            totalSimpleDollars,
+            cummulativeDataRow = GlobalReportDataRow(church, totalReports, totalAssistance, totalCommulgants, totalSimpleColones,            totalSimpleDollars,
                                                     totalDesignatedColones, totalDesignatedDollars, totalPromiseColones, totalPromiseDollars,
                                                     totalBaptisms, totalConfirmations, totalReceptions, totalTransfers, totalRestores,
                                                     totalDeaths, totalMoves, totalOtherLosses, totalWeekdayServices, totalWeekendServices)
@@ -198,31 +198,27 @@ if writeCummulativeReportPerChurch:
             emailPerChurch[church]["cummulativeReport"] = report
             writer.writerow(cummulativeDataRow.getDataList())
 
-writeIndividualChurchForm = settings.getProperty("writeIndividualChurchForm")
 
 globalEmailData = {}
 globalEmailData["attachments"] = []
 
-if writeIndividualChurchForm:
-    logger.info("")
-    logger.info(" -- REPORTE INDIVIDUAL POR IGLESIA")
-    logger.info("------")
-    for church in responsesPerChurch.keys():
-        fileName = path.relpath('reportesPorIglesia/reporte_formularios_'+church+'.csv')
-        logger.info(" - Escribiendo a archivo: " + fileName)
-        with open(fileName, 'w', encoding='UTF8', newline='') as f:
-            writer = csv.writer(f)
-            writer.writerow(IndividualDataRow.getHeaderList())
-            for response in responsesPerChurch[church]:
-                writer.writerow(response.individualDataRow.getDataList())
-        #Add file to send as attachment
-        emailPerChurch[church]["attachments"] = []
-        emailPerChurch[church]["attachments"].append(fileName)      
-        globalEmailData["attachments"].append(fileName)
-
 logger.info("")
-logger.info(" -- Enviando correos a iglesias")
+logger.info(" -- REPORTE INDIVIDUAL POR IGLESIA")
 logger.info("------")
+for church in responsesPerChurch.keys():
+    fileName = path.relpath('reportesPorIglesia/reporte_formularios_'+church+'.csv')
+    logger.info(" - Escribiendo a archivo: " + fileName)
+    with open(fileName, 'w', encoding='UTF8', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(WeeklyPerChurchDataRow.getHeaderList())
+        for response in responsesPerChurch[church]:
+            writer.writerow(response.individualDataRow.getDataList())
+    #Add file to send as attachment
+    emailPerChurch[church]["attachments"] = []
+    emailPerChurch[church]["attachments"].append(fileName)      
+    globalEmailData["attachments"].append(fileName)
+
+logger.info(" -- Enviando correos a iglesias")
 emailSender = EmailSender(googleApiService.getGmailService())
 
 for church in churchNames:
@@ -234,11 +230,10 @@ for church in churchNames:
     except Exception as e:
         logger.info("Error enviando correo")
         logger.info(e)
+logger.info(" -- Correo a iglesias enviados.")
 
-logger.info("")
-logger.info(" -- Enviando correo a oficina")
-logger.info("------")
+logger.info(" -- Enviando correo a oficina...")
 email = settings.getProperty("globalReportEmail")
-
 globalEmailData["attachments"] = formDataRetriever.getReportFiles()
 emailSender.sendGlobalReportEmail(email, globalEmailData, fecha)
+logger.info(" -- Correo a oficina enviado.")

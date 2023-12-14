@@ -1,16 +1,8 @@
 import json
 from pickle import TRUE
 from urllib import response
-
 from constants import *
-
-class WeekData:
-
-    def __init__(self, questionTitle = "", celebrantName = "", assistants = 0, commulgants = 0):
-        self.questionTitle = questionTitle
-        self.celebrantName = celebrantName
-        self.assistants = assistants
-        self.comulgants = commulgants
+from loguru import logger
 
 class ChurchResponse: 
 
@@ -24,8 +16,8 @@ class ChurchResponse:
         try:
             sanitizedInput = int(input.replace(".", ""))
         except ValueError as ve:
-            logger.info(" ==== ERROR: No se pudo convertir a un numero: ")
-            logger.info(ve)
+            logger.error(" ==== ERROR: No se pudo convertir a un numero: ")
+            logger.error(ve)
         return sanitizedInput
 
     def getAnswerIfExists(self, questionId, questionIds, answers):
@@ -103,20 +95,20 @@ class ChurchResponse:
                 try:
                     self.totalAssistants = self.totalAssistants + int(assistantsAnswerValue)
                 except ValueError:
-                    logger.info("Error converting value to int.")
+                    logger.error("Error converting value to int.")
 
                 commulgantsAnswer = answers[questionIds[COMMULGANTS_PREFIX+str(index)]]
                 commulgantsAnswerValue = self.getAnswerValue(commulgantsAnswer)
                 try:
                     self.totalCommulgants = self.totalCommulgants + int(commulgantsAnswerValue)
                 except ValueError:
-                    logger.info("Error converting value to int.")
+                    logger.error("Error converting value to int.")
 
                 index = index + 1
             else:
                 break
                 
-        self.individualDataRow = IndividualDataRow(self.formName, self.totalAssistants, self.totalCommulgants, self.simpleColones,
+        self.individualDataRow = WeeklyPerChurchDataRow(self.formName, self.totalAssistants, self.totalCommulgants, self.simpleColones,
                                 self.simpleDollars, self.designatedColones, self.designatedDollars, self.promiseColones,
                                 self.promiseDollars, self.baptisms, self.confirmations, self.receptions, self.transfers,
                                 self.restores, self.deaths, self.moves, self.otherLosses, self.amountOfWeekdayServices, self.amountOfWeekendServices)
@@ -126,11 +118,7 @@ class ChurchResponse:
                                                     self.promiseColones, self.promiseDollars, self.baptisms, self.confirmations, self.receptions,
                                                     self.transfers, self.restores, self.deaths, self.moves, self.otherLosses)
 
-
-    def addWeekData(self, weekData):
-        self.weekDatum.append(weekData)
-
-class CummulativeDataRow:
+class GlobalReportDataRow:
     def __init__(self, churchName, totalReports, totalAssistants, totalCommulgants, totalSimpleColones, totalSimpleDollars, totalDesignatedColones,
                 totalDesignatedDollars, totalPromiseColones, totalPromiseDollars, totalBaptisms, totalConfirmations, totalReceptions, totalTransfers,
                 totalRestores, totalDeaths, totalMoves, totalOtherLosses, totalWeekdayServices, totalWeekendServices):
@@ -169,7 +157,7 @@ class CummulativeDataRow:
                 str(self.totalRestores), str(self.totalDeaths), str(self.totalTransfers), str(self.totalOtherLosses), str(self.totalWeekdayServices),
                 str(self.totalWeekendServices)]
 
-class IndividualDataRow:
+class WeeklyPerChurchDataRow:
 
     def __init__(self, formName, assistants, comulgants, simpleColones, 
                 simpleDollars, designatedColones, designatedDollars, promiseColones, promiseDollars,

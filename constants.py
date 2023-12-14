@@ -1,4 +1,4 @@
-SCOPES = "https://www.googleapis.com/auth/forms https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send"
+SCOPES = ["https://www.googleapis.com/auth/forms", "https://www.googleapis.com/auth/drive", "https://www.googleapis.com/auth/gmail.send"]
 FORMS_DISCOVERY_DOC = "https://forms.googleapis.com/$discovery/rest?version=v1"
 DRIVE_DISCOVERY_DOC = "https://drive.googleapis.com/$discovery/rest?version=v3"
 
