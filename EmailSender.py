@@ -42,26 +42,28 @@ class EmailSender:
         logger.info("Enviando correo a iglesia " + churchName)
         filloutReport = emailData.get("fillOutReport")
         cummulativeReport = emailData.get("cummulativeReport")
-        if (filloutReport and cummulativeReport):
+        if (not cummulativeReport):
+            cummulativeReport = "Esta iglesia no ha llenado ningún formulario, por lo que no tiene reporte acumulado.\n\n"
+        if (filloutReport):
             emailSubject = "[Iglesia Episcopal - "+ churchName +"] Reporte con corte al " + date
             emailIntro = "Bendiciones. \n\nA continuación se provee un reporte general de las estadísticas reportadas para la congregación " + churchName + " durante el periodo que comprende a la actual Convención Diocesana, con corte al " + date + ".\n"
             emailIntro = emailIntro + "Se adjunta un archivo que puede ser usado en Microsoft Excel con la mayoría de la información reportada.\n\n\n"
             emailOutro = "\n\n --------- \n Esta información es generada automáticamente, si tiene dudas o necesita aclaraciones, por favor responder a este correo, o escribir al hermano Diego Carmona al correo dhcarmona@gmail.com "
-            emailContents = emailIntro + filloutReport + "\n\n" + cummulativeReport + emailOutro
-            message = EmailMessage()
-            message.set_content(emailContents)
-            message['to'] = email
-            message['subject'] = emailSubject
-            attachments = emailData.get("attachments")
-            if attachments:
-                for attachment in attachments:
-                    self.attachFileToMessage(message, attachment)
-            create_message = {'raw': base64.urlsafe_b64encode(message.as_bytes()).decode()}
-            try:
-                message = (self.gmailService.users().messages().send(userId="me", body=create_message).execute())
-            except HTTPError as error:
-                logger.info("An error occurred: " + error)
-                message = None
+        emailContents = emailIntro + filloutReport + "\n\n" + cummulativeReport + emailOutro
+        message = EmailMessage()
+        message.set_content(emailContents)
+        message['to'] = email
+        message['subject'] = emailSubject
+        attachments = emailData.get("attachments")
+        if attachments:
+            for attachment in attachments:
+                self.attachFileToMessage(message, attachment)
+        create_message = {'raw': base64.urlsafe_b64encode(message.as_bytes()).decode()}
+        try:
+            message = (self.gmailService.users().messages().send(userId="me", body=create_message).execute())
+        except HTTPError as error:
+            logger.info("An error occurred: " + error)
+            message = None
         else:
             logger.info("Error: no se encontraron datos necesarios para correo.")
             logger.info("filloutreport:" + filloutReport)
