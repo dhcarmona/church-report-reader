@@ -195,6 +195,22 @@ if writeCummulativeReportPerChurch:
             report = report + " - Total celebraciones entre semana en todo el periodo: " + str(totalWeekdayServices)  + "\n"
             report = report + " - Total celebraciones fin de semana en todo el periodo: " + str(totalWeekendServices)  + "\n"
             emailPerChurch[church]["cummulativeReport"] = report
+
+            cummulativeData = {}
+            cummulativeData["Formularios Llenos"] = str(len(responsesPerChurch[church]))
+            cummulativeData["Asistentes"] = str(totalAssistance)
+            cummulativeData["Comulgantes"] = str(totalCommulgants)
+            cummulativeData["Ofrenda simple colones"] = "₡" + str(totalSimpleColones)
+            cummulativeData["Ofrenda simple dólares"] = " $" + str(totalSimpleDollars)
+            cummulativeData["Ofrenda designada colones"] = "₡" +  str(totalDesignatedColones) 
+            cummulativeData["Ofrenda designada dólares"] =  "$" + str(totalDesignatedDollars)
+            cummulativeData["Promesa colones"] =  "$ " + str(totalPromiseColones)
+            cummulativeData["Promesa dólares"] = "$" + str(totalPromiseDollars)
+            cummulativeData["Celebraciones entre semana"] = str(totalWeekdayServices)
+            cummulativeData["Celebraciones fin de semana"] = str(totalWeekendServices)
+
+            emailPerChurch[church]["cummulativeData"] = cummulativeData
+
             writer.writerow(cummulativeDataRow.getDataList())
 
 
@@ -225,7 +241,7 @@ for church in churchNames:
         churchEmail = settings.getEmailForChurch(church)
         if churchEmail:
             logger.info("Correo para iglesia: " + church + " es " + churchEmail)
-            emailSender.sendIndividualChurchEmail(churchEmail, church, emailPerChurch[church], fecha)
+            emailSender.sendIndividualChurchEmail(church, churchEmail, emailPerChurch[church], fecha)
     except Exception as e:
         logger.info("Error enviando correo")
         logger.info(e)
