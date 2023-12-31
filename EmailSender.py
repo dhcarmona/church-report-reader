@@ -5,6 +5,7 @@ from email.message import EmailMessage
 from requests import HTTPError
 from loguru import logger
 from jinja2 import Template
+from HtmlPDFConverter import *
 
 
 class EmailSender:
@@ -26,7 +27,6 @@ class EmailSender:
         emailIntro = emailIntro + "Se adjuntan también archivos que pueden ser usados en Microsoft Excel con la mayoría de la información reportada, por cada semana, y por cada iglesia.<br><br><br>"
         emailOutro = "<br><br> --------- <br> Esta información es generada automáticamente, si tiene dudas o necesita aclaraciones, por favor responder a este correo, o escribir al hermano Diego Carmona al correo dhcarmona@gmail.com "
         emailContents = emailIntro + "<br><br>" + emailOutro
-        #emailContents = emailContents.decode("unicode_escape")
         logger.trace(emailContents)
         attachments = emailData.get("attachments")
         message = EmailMessage()
@@ -47,24 +47,26 @@ class EmailSender:
             logger.info("An error occurred: " + error)
             message = None
 
-    def parseJinjaTemplate(self, title, churchName, cutoffDate, cummulativeData):
+    def parseJinjaTemplate(self, title, churchName, cutoffDate, cummulativeData, fillOutData):
         logger.info("Parsing Jinja template")
+        data = []
+        dataNames = []
+
+        for item in cummulativeData:
+            value = cummulativeData.get(item)
+            data.append(value)
+            dataNames.append(item)
+
         templateData = {
             'email_title': title,
             'church_name': churchName,
             'cutoff_date': cutoffDate,
             'base64_logo': 'YourBase64EncodedLogo',
             'base64_image': 'YourBase64EncodedImage',
+            'data': data,
+            'dataNames': dataNames,
+            'fillOutData' : fillOutData
         }
-
-        logger.trace(json.dumps(cummulativeData))
-
-        dataIndex = 1
-        for item in cummulativeData:
-            value = cummulativeData.get(item)
-            templateData["data"+str(dataIndex)] = value
-            templateData["data"+str(dataIndex)+"_name"] = item
-            dataIndex = dataIndex + 1
 
         logger.trace("Data for Jinja template:")
         logger.trace(json.dumps(templateData))
@@ -79,17 +81,27 @@ class EmailSender:
         # Render the template with dynamic data
         renderedTemplate = template.render(templateData)
 
-        logger.trace("Rendered template:")
-        logger.trace(renderedTemplate)
         return renderedTemplate
 
     def sendIndividualChurchEmail(self, churchName, email, emailData, date):
         logger.info("Enviando correo a iglesia " + churchName)
+        fillOutReport = emailData.get("fillOutReport")
         cummulativeData = emailData.get("cummulativeData")
+        fillOutData = emailData.get("fillOutData")
         if (not cummulativeData):
             cummulativeReport = "Esta iglesia no ha llenado ningún formulario, por lo que no tiene reporte acumulado.\n\n"
         emailSubject = "[Iglesia Episcopal - "+ churchName +"] Reporte con corte al " + date
-        emailContents = self.parseJinjaTemplate(emailSubject, churchName, date, cummulativeData)
+        htmlContents = self.parseJinjaTemplate(emailSubject, churchName, date, cummulativeData, fillOutData)
+        emailContents = f"""Bendiciones. <br>
+        Adjunto a este correo encontrará un archivo PDF con la información estadística correspondiente al corte actual. <br> 
+        Adicionamente, encontrará un archivo CSV que puede ser usado en Excel, y contiene la mayoría de la información proporcionada <br><br> 
+        --------- <br> <br>
+        {fillOutReport}
+        --------- <br> 
+        Esta información es generada automáticamente, si tiene dudas o necesita aclaraciones, por favor responder a este correo, o escribir al hermano Diego Carmona al correo dhcarmona@gmail.com "
+        """
+        churchPdfFileName = "pdf"+churchName+date+".pdf"
+
         message = EmailMessage()
         message.add_header('Content-Type','text/html')
         message.add_alternative(
@@ -98,6 +110,8 @@ class EmailSender:
             )
         message['to'] = email
         message['subject'] = emailSubject
+        HtmlPDFConverter.convertHtmlToPDF(htmlContents, churchPdfFileName)
+        self.attachFileToMessage(message, churchPdfFileName)
         attachments = emailData.get("attachments")
         if attachments:
             for attachment in attachments:
@@ -108,7 +122,5 @@ class EmailSender:
         except HTTPError as error:
             logger.info("An error occurred: " + error)
             message = None
-        else:
-            logger.info("Error: no se encontraron datos necesarios para correo.")
 
 

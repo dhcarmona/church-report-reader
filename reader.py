@@ -109,17 +109,28 @@ if writeFilloutReport:
     logger.debug("------")
 
     for church in churchNames:
+        fillOutDataList = []
+        fillOutDataItem = {}
         report = ""
         report = report + "------\n"
-        report = report + " Formularios Faltantes para Congregación: " + church + "\n"
+        report = report + " Formularios Faltantes para Congregación: " + church + "<br><br>"
+        report = report + "<table style='width: 70%'><tr><th>Formulario</th><th>Enlace</th></tr>"
         try:
             for missingForm in formsMissingPerChurch[church]:
-                report = report + " -- " + missingForm['info']['documentTitle'] + "\n"
-                report = report + " -- Enlace para llenarlo: " + missingForm.get("responderUri") + "\n"
+                report = report + "<tr>"
+                report = report + "<td>" + missingForm['info']['documentTitle'] + "</td>"
+                report = report + "<td><a href=" + missingForm.get("responderUri") + " target='_blank'>Haga click aquí para llenarlo.</a></td>"
+                report = report + "</tr>"
+                fillOutDataItem["name"] = missingForm['info']['documentTitle']
+                fillOutDataItem["link"] = missingForm.get("responderUri")
+                fillOutDataList.append(fillOutDataItem)
         except KeyError:
-            report = report + "Esta congregación no tiene ningun formulario faltante.\n"
-        logger.debug(report)
+            report = report + "Esta congregación no tiene ningun formulario faltante.<br>"
+        report = report + "</tr>"
+        logger.trace(report)
+        logger.trace(fillOutDataList)
         emailPerChurch[church]["fillOutReport"] = report
+        emailPerChurch[church]["fillOutData"] = fillOutDataList
 
 writeCummulativeReportPerChurch = settings.getProperty("writeCummulativeReportPerChurch")
 
