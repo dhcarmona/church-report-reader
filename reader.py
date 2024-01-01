@@ -166,7 +166,21 @@ if writeCummulativeReportPerChurch:
             totalWeekdayServices = 0
             totalWeekendServices = 0
 
+            weeklyDataPoints = []
+
+            emailPerChurch[church]["weeklyDataPoints"] = weeklyDataPoints
+
             for response in responsesPerChurch[church]:
+                weeklyDataPoint = {}
+                weeklyDataPoint["assistants"] =  response.totalAssistants
+                weeklyDataPoint["commulgants"] =  response.totalCommulgants
+                weeklyDataPoint["totalOfferingsColones"] =  response.simpleColones + response.designatedColones + response.promiseColones
+                weeklyDataPoint["totalOfferingsDollars"] =  response.simpleDollars + response.designatedDollars + response.promiseDollars
+                weeklyDataPoint["totalAdditions"] = response.baptisms + response.confirmations + response.receptions + response.transfers +  response.restores
+                weeklyDataPoint["totalLosses"] = response.deaths + response.moves + response.otherLosses
+
+                weeklyDataPoints.append(weeklyDataPoint)
+
                 totalReports = totalReports + 1
                 totalAssistance = totalAssistance + response.totalAssistants
                 totalCommulgants = totalCommulgants + response.totalCommulgants
@@ -206,6 +220,8 @@ if writeCummulativeReportPerChurch:
             report = report + " - Total celebraciones entre semana en todo el periodo: " + str(totalWeekdayServices)  + "\n"
             report = report + " - Total celebraciones fin de semana en todo el periodo: " + str(totalWeekendServices)  + "\n"
             emailPerChurch[church]["cummulativeReport"] = report
+
+
 
             cummulativeData = {}
             cummulativeData["Formularios Llenos"] = str(len(responsesPerChurch[church]))

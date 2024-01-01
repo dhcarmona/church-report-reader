@@ -7,7 +7,7 @@ class HtmlPDFConverter:
     def convertHtmlToPDF(htmlString, pdfPath):
         options = {
             'scale': 0.5,
-            'landscape' : True,
+            'landscape' : False,
             'format': 'Letter',
             'margin': {
                 'top': '0.75in',

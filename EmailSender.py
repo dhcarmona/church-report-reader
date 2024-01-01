@@ -6,6 +6,8 @@ from requests import HTTPError
 from loguru import logger
 from jinja2 import Template
 from HtmlPDFConverter import *
+from GraphicProducer import *
+import matplotlib.pyplot as plt
 
 
 class EmailSender:
@@ -47,7 +49,7 @@ class EmailSender:
             logger.info("An error occurred: " + error)
             message = None
 
-    def parseJinjaTemplate(self, title, churchName, cutoffDate, cummulativeData, fillOutData):
+    def parseJinjaTemplate(self, title, churchName, cutoffDate, cummulativeData, fillOutData, plotFile):
         logger.info("Parsing Jinja template")
         data = []
         dataNames = []
@@ -66,7 +68,8 @@ class EmailSender:
             'base64_image': 'YourBase64EncodedImage',
             'data': data,
             'dataNames': dataNames,
-            'fillOutData' : fillOutData
+            'fillOutData' : fillOutData,
+            'plotFile' : plotFile
         }
 
         logger.trace("Data for Jinja template:")
@@ -88,11 +91,14 @@ class EmailSender:
         logger.info("Enviando correo a iglesia " + churchName)
         fillOutReport = emailData.get("fillOutReport")
         cummulativeData = emailData.get("cummulativeData")
+        weeklyDataPoints = emailData.get("weeklyDataPoints")
+        graphicProducer = GraphicProducer()
+        plotFile = graphicProducer.generateLinearPlot(weeklyDataPoints, "historicalPlot"+churchName+date+".png")
         fillOutData = emailData.get("fillOutData")
         if (not cummulativeData):
             cummulativeReport = "Esta iglesia no ha llenado ningún formulario, por lo que no tiene reporte acumulado.\n\n"
         emailSubject = "[Iglesia Episcopal - "+ churchName +"] Reporte con corte al " + date
-        htmlContents = self.parseJinjaTemplate(emailSubject, churchName, date, cummulativeData, fillOutData)
+        htmlContents = self.parseJinjaTemplate(emailSubject, churchName, date, cummulativeData, fillOutData, plotFile)
         emailContents = f"""Bendiciones. <br>
         Adjunto a este correo encontrará un archivo PDF con la información estadística correspondiente al corte actual. <br> 
         Adicionamente, encontrará un archivo CSV que puede ser usado en Excel, y contiene la mayoría de la información proporcionada <br><br> 

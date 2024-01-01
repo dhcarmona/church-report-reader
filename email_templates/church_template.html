@@ -10,15 +10,16 @@
             font-family: 'Open Sans';
             margin: 0;
             padding: 0;
-            background-color: rgb(234, 229, 229);
+            background-color: white;
         }
 
         #container {
             margin: 20px;
             padding: 20px;
-            background-color: whitesmoke;
-            box-shadow: 0px 0px 30px 20px #27376E;
+            background-color:white;
+            box-shadow: 0px 0px 30px 20px #d8e1ff;
             text-align: center;
+            border: 2px solid #27376E;
         }
 
         #header-container {
@@ -48,17 +49,16 @@
             padding: 20px;
         }
 
-        #grid-container {
-            display: inline-grid;
-            grid-template-columns: 1fr 1fr;
-            grid-gap: 15px;
+        #cummulative-data-container {
+            width: fit-content;
+            margin: auto;
         }
 
-        #cummulative-data-container {
-            display: inline-grid;
-            grid-template-columns: minmax(100px, 150px) minmax(100px, 150px) minmax(100px, 150px) minmax(100px, 150px);
-            grid-gap: 15px;
-            margin: 0;
+        #cummulative-data-boxes-container {
+                display: inline-grid;
+                grid-template-columns: minmax(150px, 200px) minmax(150px, 200px) minmax(150px, 200px) minmax(150px, 200px) minmax(150px, 200px);
+                grid-gap: 15px;
+                margin: 0;
         }
 
         #missing-forms-table-container {
@@ -66,13 +66,15 @@
         }
 
         tr:nth-child(even) {
-                background-color: #d6d6d6d5;
+                background-color: #1a35e121;
         }
 
         .cummulative-data-box {
-            border: 1px solid #AA1E2C; /* Black border */
+            border: 1px solid #27376e;
+            border-radius: 10px;
             float: left;
             text-align: center;
+            background-color: #5276f326;
         }
 
         .form-name {
@@ -91,7 +93,7 @@
         }
 
         #image {
-            width: 50%;
+            width: 100%;
             float: left;
         }
 
@@ -126,28 +128,27 @@
                 </div>
             </div>
         </div>
+        
         <div id="content-container">
-            <div id="grid-container">
-                <div>
-                    <div class="data-header">
-                        <h4>Datos Acumulados</h4>
-                    </div>
-                    <div id="cummulative-data-container">
-                        {% for i in range(0,11) %}
-                        <div class="cummulative-data-box">
-                            <p style="font-size: 20px; margin: 0;">{{ data[i] }}</p>
-                            <p style="font-size: 14px; margin: 0;">{{ dataNames[i] }}</p>
-                        </div>
-                        {% endfor %}
-                    </div>
+            <div class="cummulative-data-container">
+                <div class="data-header">
+                    <h4>Datos Acumulados</h4>
                 </div>
-                <div>
-                    <div class="data-header">
-                        <h4>Histórico a la fecha</h4>
+                <div id="cummulative-data-boxes-container">
+                    {% for i in range(0,11) %}
+                    <div class="cummulative-data-box">
+                        <p style="font-size: 20px; margin: 0;">{{ data[i] }}</p>
+                        <p style="font-size: 14px; margin: 0;">{{ dataNames[i] }}</p>
                     </div>
-                    <div id="image">
-                        <img src="data:image/png;base64,{{line_graph}}" alt="Image">
-                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <div>
+                <div class="data-header">
+                    <h4>Histórico a la fecha</h4>
+                </div>
+                <div id="image">
+                    <img src="{{plotFile}}" alt="Image">
                 </div>
             </div>
             {% if fillOutData %}

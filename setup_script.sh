@@ -8,3 +8,5 @@ pip install --upgrade loguru
 brew install pkg-config
 brew install cairo
 pip install --upgrade xhtml2pdf
+pip install --upgrade matplotlib
+
