@@ -52,10 +52,11 @@ class EmailSender:
         data = []
         dataNames = []
 
-        for item in cummulativeData:
-            value = cummulativeData.get(item)
-            data.append(value)
-            dataNames.append(item)
+        if cummulativeData:
+            for item in cummulativeData:
+                value = cummulativeData.get(item)
+                data.append(value)
+                dataNames.append(item)
 
         templateData = {
             'email_title': title,

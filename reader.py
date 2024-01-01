@@ -110,7 +110,6 @@ if writeFilloutReport:
 
     for church in churchNames:
         fillOutDataList = []
-        fillOutDataItem = {}
         report = ""
         report = report + "------\n"
         report = report + " Formularios Faltantes para Congregación: " + church + "<br><br>"
@@ -121,6 +120,7 @@ if writeFilloutReport:
                 report = report + "<td>" + missingForm['info']['documentTitle'] + "</td>"
                 report = report + "<td><a href=" + missingForm.get("responderUri") + " target='_blank'>Haga click aquí para llenarlo.</a></td>"
                 report = report + "</tr>"
+                fillOutDataItem = {}
                 fillOutDataItem["name"] = missingForm['info']['documentTitle']
                 fillOutDataItem["link"] = missingForm.get("responderUri")
                 fillOutDataList.append(fillOutDataItem)
@@ -255,7 +255,7 @@ for church in churchNames:
             emailSender.sendIndividualChurchEmail(church, churchEmail, emailPerChurch[church], fecha)
     except Exception as e:
         logger.info("Error enviando correo")
-        logger.info(e)
+        logger.info(e) 
 logger.info(" -- Correo a iglesias enviados.")
 
 logger.info(" -- Enviando correo a oficina...")
