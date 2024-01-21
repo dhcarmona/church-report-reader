@@ -4,3 +4,5 @@ credentials.json
 __pycache__/
 reporte_*.csv
 pdf*.pdf
+*.png
+*.html

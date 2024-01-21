@@ -1,4 +1,5 @@
 import json
+import re
 from pickle import TRUE
 from urllib import response
 from constants import *
@@ -25,7 +26,14 @@ class ChurchResponse:
             if questionIds[questionId] in answers:
                 return self.sanitizeMonetaryInput(self.getAnswerValue(answers[questionIds[questionId]]))
         return 0
-
+    
+    def getReportDate(self, formName):
+        try:
+            match = re.search('\((.+?)\)', formName).group(1)
+        except AttributeError:
+            match = ''
+        return match
+    
     def __init__(self, formResponse, questionIds, formName):
 
         # Get general form data
@@ -33,6 +41,7 @@ class ChurchResponse:
         self.churchName = self.getAnswerValue(answers[questionIds[CHURCH_QUESTION_TITLE]])
         self.reportFiller = self.getAnswerValue(answers[questionIds[REPORT_FILLER]])
         self.formName = formName
+        self.reportDate = self.getReportDate(formName)
         
         self.simpleColones = 0
         self.simpleDollars = 0

@@ -178,6 +178,7 @@ if writeCummulativeReportPerChurch:
                 weeklyDataPoint["totalOfferingsDollars"] =  response.simpleDollars + response.designatedDollars + response.promiseDollars
                 weeklyDataPoint["totalAdditions"] = response.baptisms + response.confirmations + response.receptions + response.transfers +  response.restores
                 weeklyDataPoint["totalLosses"] = response.deaths + response.moves + response.otherLosses
+                weeklyDataPoint["reportDate"] = response.reportDate
 
                 weeklyDataPoints.append(weeklyDataPoint)
 

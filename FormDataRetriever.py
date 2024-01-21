@@ -72,7 +72,6 @@ class FormDataRetriever:
         assistantIndex = 0
         commulgantIndex = 0
         for item in form.get("items"):
-            #logger.trace(json.dumps(item, indent=4))
             questionTitle = item.get("title") 
             if (CHURCH_QUESTION_ID) in questionTitle:
                 questionIds[CHURCH_QUESTION_TITLE] = item.get("questionItem").get("question").get("questionId")
@@ -140,7 +139,6 @@ class FormDataRetriever:
             logger.debug("ID for church question: "+ churchQuestionId)
             logger.info("Procesando respuestas...")
             responseList = self.retrieveFormResponses(form.get("formId"))
-            logger.trace(json.dumps(responseList, indent=4))
             if not responseList:
                 logger.info(" --- ERROR: No hay respuestas para el formulario. "+ formName +" ---")
                 continue
