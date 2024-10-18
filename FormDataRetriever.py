@@ -139,11 +139,16 @@ class FormDataRetriever:
             logger.debug("ID for church question: "+ churchQuestionId)
             logger.info("Procesando respuestas...")
             responseList = self.retrieveFormResponses(form.get("formId"))
+            churchesWhoAnsweredThisForm = []
             if not responseList:
                 logger.info(" --- ERROR: No hay respuestas para el formulario. "+ formName +" ---")
+                for church in self.retrieveChurchNames():
+                    logger.debug("--- IGLESIA " + church + " NO RESPONDIO ESTE FORMULARIO -- ")
+                    if not church in self.formsMissingPerChurch:
+                        self.formsMissingPerChurch[church] = []
+                    self.formsMissingPerChurch[church].append(form)
                 continue
             logger.debug("Encontradas "+ str(len(responseList)) +" respuestas para este formulario.")
-            churchesWhoAnsweredThisForm = []
             with CSVWriter(fileName, IndividualFormRow.getHeaderList()) as csvWriter:
                 for response in responseList:
                     churchResponse = ChurchResponse(response, questionIds, formName)

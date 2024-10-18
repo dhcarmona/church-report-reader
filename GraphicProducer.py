@@ -20,9 +20,10 @@ class GraphicProducer:
             peopleVariables = ["assistants", "commulgants", "totalAdditions", "totalLosses"]
             peopleVariablesLabels = ["Asistentes", "Comulgantes", "Adiciones", "Pérdidas"]
 
-            fig, ax = plt.subplots(figsize=(10, 6))
+            fig, ax = plt.subplots(figsize=(10, 10))
             logger.trace(f"Producing plot with data points:{dataPoints}")
             ax.ticklabel_format(style="plain")
+            ax.tick_params(axis='x', labelrotation=90)
             for i, variable in enumerate(moneyVariables):
                 y_values = []
                 for point in dataPoints:

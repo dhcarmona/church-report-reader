@@ -92,8 +92,11 @@ class EmailSender:
         fillOutReport = emailData.get("fillOutReport")
         cummulativeData = emailData.get("cummulativeData")
         weeklyDataPoints = emailData.get("weeklyDataPoints")
-        graphicProducer = GraphicProducer()
-        plotFile = graphicProducer.generateLinearPlot(weeklyDataPoints, "historicalPlot"+churchName+date+".png")
+        if (cummulativeData and weeklyDataPoints):
+            graphicProducer = GraphicProducer()
+            plotFile = graphicProducer.generateLinearPlot(weeklyDataPoints, "historicalPlot"+churchName+date+".png")
+        else:
+            plotFile = None
         fillOutData = emailData.get("fillOutData")
         if (not cummulativeData):
             cummulativeReport = "Esta iglesia no ha llenado ningún formulario, por lo que no tiene reporte acumulado.\n\n"

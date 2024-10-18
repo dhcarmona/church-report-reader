@@ -244,7 +244,7 @@ if writeCummulativeReportPerChurch:
             cummulativeData["Ofrenda simple dólares"] = " $" + str(totalSimpleDollars)
             cummulativeData["Ofrenda designada colones"] = "₡" +  str(totalDesignatedColones) 
             cummulativeData["Ofrenda designada dólares"] =  "$" + str(totalDesignatedDollars)
-            cummulativeData["Promesa colones"] =  "$ " + str(totalPromiseColones)
+            cummulativeData["Promesa colones"] =  "₡" + str(totalPromiseColones)
             cummulativeData["Promesa dólares"] = "$" + str(totalPromiseDollars)
             cummulativeData["Celebraciones entre semana"] = str(totalWeekdayServices)
             cummulativeData["Celebraciones fin de semana"] = str(totalWeekendServices)
