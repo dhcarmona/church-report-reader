@@ -11,6 +11,7 @@ from GoogleAPIService import GoogleAPIService
 from FormDataRetriever import FormDataRetriever
 from SettingsRetriever import SettingsRetriever
 from datetime import date
+from datetime import datetime
 from os import path
 import sys
 
@@ -134,6 +135,15 @@ if writeFilloutReport:
 
 writeCummulativeReportPerChurch = settings.getProperty("writeCummulativeReportPerChurch")
 
+
+def sortResponsesByDate(responses):
+    def getDateAsTime(response):
+        return datetime.strptime(response.reportDate, "%d-%m-%Y")
+
+    sorted_responses = sorted(responses, key=getDateAsTime)
+    return sorted_responses
+
+
 if writeCummulativeReportPerChurch:
     logger.info("")
     logger.info(" -- REPORTE DE ACUMULADOS POR IGLESIA")
@@ -169,6 +179,8 @@ if writeCummulativeReportPerChurch:
             weeklyDataPoints = []
 
             emailPerChurch[church]["weeklyDataPoints"] = weeklyDataPoints
+
+            responsesPerChurch[church] = sortResponsesByDate(responsesPerChurch[church])
 
             for response in responsesPerChurch[church]:
                 weeklyDataPoint = {}
